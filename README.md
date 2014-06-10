@@ -4,8 +4,9 @@ This module provides a Ruby interface for data serialization in [GGN](http://sas
 
 ## Status
 
-[![Gem Version](https://badge.fury.io/rb/sashite-ggn.svg)](//badge.fury.io/rb/sashite-ggn)
-[![Build Status](https://secure.travis-ci.org/sashite/ggn.rb.svg?branch=master)](//travis-ci.org/sashite/ggn.rb?branch=master)
+* [![Gem Version](https://badge.fury.io/rb/sashite-ggn.svg)](//badge.fury.io/rb/sashite-ggn)
+* [![Build Status](https://secure.travis-ci.org/sashite/ggn.rb.svg?branch=master)](//travis-ci.org/sashite/ggn.rb?branch=master)
+* [![Dependency Status](https://gemnasium.com/sashite/ggn.rb.svg)](//gemnasium.com/sashite/ggn.rb)
 
 ## Installation
 
