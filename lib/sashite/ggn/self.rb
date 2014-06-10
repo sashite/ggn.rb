@@ -1,21 +1,19 @@
-require 'singleton'
-
 module Sashite
   module GGN
-    class Self
-      include Singleton
-
+    module Self
       PATTERN = /self/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def as_json
+      def self.load io = nil
+        raise ArgumentError if io && !valid?(io)
+
         :self
       end
 
-      def to_s
+      def self.dump
         'self'
       end
     end

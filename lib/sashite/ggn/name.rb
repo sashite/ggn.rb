@@ -1,24 +1,16 @@
 module Sashite
   module GGN
-    class Name
+    module Name
       PATTERN = /(capture|remove|shift)/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = str.to_sym
-      end
-
-      def as_json
-        @value
-      end
-
-      def to_s
-        @value.to_s
+        io.to_sym
       end
     end
   end

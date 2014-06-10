@@ -1,51 +1,21 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Name do
-  describe '.new' do
-    describe 'capture' do
-      before do
-        @name = Sashite::GGN::Name.new('capture')
-      end
+  subject { Sashite::GGN::Name }
 
-      it 'returns the GGN as a JSON' do
-        @name.as_json.must_equal :capture
-      end
-
-      it 'returns the GGN as a string' do
-        @name.to_s.must_equal 'capture'
-      end
+  describe '.load' do
+    before do
+      @ggn_obj = 'capture'
     end
 
-    describe 'remove' do
-      before do
-        @name = Sashite::GGN::Name.new('remove')
-      end
-
-      it 'returns the GGN as a JSON' do
-        @name.as_json.must_equal :remove
-      end
-
-      it 'returns the GGN as a string' do
-        @name.to_s.must_equal 'remove'
-      end
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).must_equal :capture
     end
 
-    describe 'shift' do
-      before do
-        @name = Sashite::GGN::Name.new('shift')
-      end
-
-      it 'returns the GGN as a JSON' do
-        @name.as_json.must_equal :shift
-      end
-
-      it 'returns the GGN as a string' do
-        @name.to_s.must_equal 'shift'
+    describe 'errors' do
+      it 'raises an error' do
+        -> { subject.load 'foobar' }.must_raise ArgumentError
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Name.new('foobar') }.must_raise ArgumentError
   end
 end

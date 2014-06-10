@@ -1,22 +1,21 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::DigitExcludingZero do
-  describe '.new' do
+  subject { Sashite::GGN::DigitExcludingZero }
+
+  describe '.load' do
     before do
-      @digit_excluding_zero = Sashite::GGN::DigitExcludingZero.new('8')
+      @ggn_obj = '8'
     end
 
-    it 'returns the GGN as a JSON' do
-      @digit_excluding_zero.as_json.must_equal 8
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).must_equal 8
     end
 
-    it 'returns the GGN as a string' do
-      @digit_excluding_zero.to_s.must_equal '8'
+    describe 'errors' do
+      it 'raises with zero' do
+        -> { subject.load '0' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::DigitExcludingZero.new( '0') }.must_raise ArgumentError
-    -> { Sashite::GGN::DigitExcludingZero.new('42') }.must_raise ArgumentError
   end
 end

@@ -2,25 +2,17 @@ require_relative 'boolean'
 
 module Sashite
   module GGN
-    class Required
+    module Required
       PATTERN = /#{Boolean::PATTERN}/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = Boolean.new(str)
-      end
-
-      def as_json
-        @value.as_json
-      end
-
-      def to_s
-        @value.to_s
+        Boolean.load io
       end
     end
   end

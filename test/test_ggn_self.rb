@@ -1,21 +1,21 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Self do
-  describe '.instance' do
+  subject { Sashite::GGN::Self }
+
+  describe '.load' do
     before do
-      @s = Sashite::GGN::Self.instance
+      @ggn_obj = 'self'
     end
 
-    it 'returns the GGN as a JSON' do
-      @s.as_json.must_equal :self
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).must_equal :self
     end
 
-    it 'returns the GGN as a string' do
-      @s.to_s.must_equal 'self'
+    describe 'errors' do
+      it 'raises without self' do
+        -> { subject.load '42' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'is false' do
-    Sashite::GGN::Self.valid?('foobar').must_equal false
   end
 end

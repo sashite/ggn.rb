@@ -1,24 +1,16 @@
 module Sashite
   module GGN
-    class DigitExcludingZero
+    module DigitExcludingZero
       PATTERN = /[1-9]/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = str.to_i
-      end
-
-      def as_json
-        @value
-      end
-
-      def to_s
-        @value.to_s
+        io.to_i
       end
     end
   end

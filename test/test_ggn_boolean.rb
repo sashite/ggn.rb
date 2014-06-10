@@ -1,37 +1,21 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Boolean do
-  describe '.new' do
-    describe 'false' do
-      before do
-        @boolean = Sashite::GGN::Boolean.new('f')
-      end
+  subject { Sashite::GGN::Boolean }
 
-      it 'returns the GGN as a JSON' do
-        @boolean.as_json.must_equal false
-      end
-
-      it 'returns the GGN as a string' do
-        @boolean.to_s.must_equal 'f'
-      end
+  describe '.load' do
+    before do
+      @ggn_obj = 't'
     end
 
-    describe 'true' do
-      before do
-        @boolean = Sashite::GGN::Boolean.new('t')
-      end
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).must_equal true
+    end
 
-      it 'returns the GGN as a JSON' do
-        @boolean.as_json.must_equal true
-      end
-
-      it 'returns the GGN as a string' do
-        @boolean.to_s.must_equal 't'
+    describe 'errors' do
+      it 'raises without a boolean' do
+        -> { subject.load 'foobar' }.must_raise ArgumentError
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Boolean.new('foobar') }.must_raise ArgumentError
   end
 end

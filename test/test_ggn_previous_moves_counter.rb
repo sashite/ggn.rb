@@ -1,40 +1,38 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::PreviousMovesCounter do
-  describe '.new' do
+  subject { Sashite::GGN::PreviousMovesCounter }
+
+  describe '.load' do
     describe 'null' do
       before do
-        @previous_moves_counter = Sashite::GGN::PreviousMovesCounter.new('_')
+        @ggn_obj = '_'
       end
 
-      it 'returns the GGN as a JSON' do
-        @previous_moves_counter.as_json.must_equal nil
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal nil
       end
 
-      it 'returns the GGN as a string' do
-        @previous_moves_counter.to_s.must_equal '_'
-      end
-
-      it 'raises an error' do
-        -> { Sashite::GGN::PreviousMovesCounter.new('foobar') }.must_raise ArgumentError
+      describe 'errors' do
+        it 'raises without null' do
+          -> { subject.load '' }.must_raise ArgumentError
+        end
       end
     end
 
-    describe 'unsigned integer' do
+    describe 'an unsigned integer' do
       before do
-        @previous_moves_counter = Sashite::GGN::PreviousMovesCounter.new('42')
+        @ggn_obj = '0'
       end
 
-      it 'returns the GGN as a JSON' do
-        @previous_moves_counter.as_json.must_equal 42
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal 0
       end
 
-      it 'returns the GGN as a string' do
-        @previous_moves_counter.to_s.must_equal '42'
-      end
-
-      it 'raises an error' do
-        -> { Sashite::GGN::PreviousMovesCounter.new('-42') }.must_raise ArgumentError
+      describe 'errors' do
+        it 'raises with a negative integer' do
+          -> { subject.load '-4' }.must_raise ArgumentError
+        end
       end
     end
   end

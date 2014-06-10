@@ -1,21 +1,21 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Zero do
-  describe '.instance' do
+  subject { Sashite::GGN::Zero }
+
+  describe '.load' do
     before do
-      @s = Sashite::GGN::Zero.instance
+      @ggn_obj = '0'
     end
 
-    it 'returns the GGN as a JSON' do
-      @s.as_json.must_equal 0
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).must_equal 0
     end
 
-    it 'returns the GGN as a string' do
-      @s.to_s.must_equal '0'
+    describe 'errors' do
+      it 'raises without zero' do
+        -> { subject.load '4' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'is false' do
-    Sashite::GGN::Zero.valid?('foobar').must_equal false
   end
 end

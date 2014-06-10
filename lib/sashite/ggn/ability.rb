@@ -4,33 +4,25 @@ require_relative 'object'
 
 module Sashite
   module GGN
-    class Ability
+    module Ability
       PATTERN = /#{Subject::PATTERN}\^#{Verb::PATTERN}=#{Object::PATTERN}/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      attr_reader :subject, :verb, :object
+      def self.load io
+        raise ArgumentError unless valid? io
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+        subject = Subject.load io.split('^').fetch 0
+        verb    = Verb.load io.split('^').fetch(1).split('=').fetch 0
+        object  = Object.load io.split('=').fetch 1
 
-        @subject = Subject.new str.split('^').fetch 0
-        @verb    = Verb.new str.split('^').fetch(1).split('=').fetch 0
-        @object  = Object.new str.split('=').fetch 1
-      end
-
-      def as_json
         {
-          subject: @subject.as_json,
-          verb: @verb.as_json,
-          object: @object.as_json
+          subject: subject,
+          verb: verb,
+          object: object
         }
-      end
-
-      def to_s
-        "#{@subject}^#{@verb}=#{@object}"
       end
     end
   end

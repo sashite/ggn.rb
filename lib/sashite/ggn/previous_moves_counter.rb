@@ -3,25 +3,17 @@ require_relative 'unsigned_integer'
 
 module Sashite
   module GGN
-    class PreviousMovesCounter
+    module PreviousMovesCounter
       PATTERN = /(#{Null::PATTERN}|#{UnsignedInteger::PATTERN})/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = (Null.valid?(str) ? Null.instance : UnsignedInteger.new(str))
-      end
-
-      def as_json
-        @value.as_json
-      end
-
-      def to_s
-        @value.to_s
+        Null.valid?(io) ? Null.load : UnsignedInteger.load(io)
       end
     end
   end

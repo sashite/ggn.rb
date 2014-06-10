@@ -6,22 +6,14 @@ module Sashite
     class Actor
       PATTERN = /(#{Self::PATTERN}|#{GameplayIntoBase64::PATTERN})/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = (Self.valid?(str) ? Self.instance : GameplayIntoBase64.new(str))
-      end
-
-      def as_json
-        @value.as_json
-      end
-
-      def to_s
-        @value.to_s
+        Self.valid?(io) ? Self.load : GameplayIntoBase64.load(io)
       end
     end
   end

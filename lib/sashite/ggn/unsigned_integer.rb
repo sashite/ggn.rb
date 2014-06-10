@@ -3,25 +3,17 @@ require_relative 'zero'
 
 module Sashite
   module GGN
-    class UnsignedInteger
+    module UnsignedInteger
       PATTERN = /(#{Zero::PATTERN}|#{UnsignedIntegerExcludingZero::PATTERN})/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = (Zero.valid?(str) ? Zero.instance : UnsignedIntegerExcludingZero.new(str))
-      end
-
-      def as_json
-        @value.as_json
-      end
-
-      def to_s
-        @value.to_s
+        Zero.valid?(io) ? Zero.load : UnsignedIntegerExcludingZero.load(io)
       end
     end
   end

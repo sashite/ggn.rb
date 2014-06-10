@@ -1,51 +1,35 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Attacked do
-  describe '.new' do
-    describe 'false' do
+  subject { Sashite::GGN::Attacked }
+
+  describe '.load' do
+    describe 'boolean' do
       before do
-        @attacked = Sashite::GGN::Attacked.new('f')
+        @ggn_obj = 't'
       end
 
-      it 'returns the GGN as a JSON' do
-        @attacked.as_json.must_equal false
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal true
       end
 
-      it 'returns the GGN as a string' do
-        @attacked.to_s.must_equal 'f'
-      end
-    end
-
-    describe 'true' do
-      before do
-        @attacked = Sashite::GGN::Attacked.new('t')
-      end
-
-      it 'returns the GGN as a JSON' do
-        @attacked.as_json.must_equal true
-      end
-
-      it 'returns the GGN as a string' do
-        @attacked.to_s.must_equal 't'
+      it 'raises an error' do
+        -> { subject.load 'true' }.must_raise ArgumentError
       end
     end
 
     describe 'null' do
       before do
-        @attacked = Sashite::GGN::Attacked.new('_')
+        @ggn_obj = '_'
       end
 
-      it 'returns the GGN as a JSON' do
-        @attacked.as_json.must_equal nil
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal nil
       end
 
-      it 'returns the GGN as a string' do
-        @attacked.to_s.must_equal '_'
+      it 'raises an error' do
+        -> { subject.load '' }.must_raise ArgumentError
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Attacked.new('foobar') }.must_raise ArgumentError
   end
 end

@@ -1,6 +1,6 @@
 # Sashite::GGN
 
-This module provides a Ruby interface for gameplay serialization in [GGN](http://sashite.wiki/General_Gameplay_Notation) format.
+This module provides a Ruby interface for data serialization in [GGN](http://sashite.wiki/General_Gameplay_Notation) format.
 
 ## Status
 
@@ -23,10 +23,14 @@ Or install it yourself as:
 
 ## Usage
 
+Working with GGN can be very simple, for example:
+
 ```ruby
 require 'sashite-ggn'
 
-arr = [
+# Parse a GGN string
+
+ggn_obj = [
   [
     {
       :"subject" => {
@@ -550,16 +554,8 @@ arr = [
   ]
 ]
 
-gameplay = Sashite::GGN.new arr
-
-gameplay.to_s
+Sashite::GGN.load(ggn_obj)
 # => "t<self>_&_^remove[-1,0]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^remove[0,-1]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^remove[0,1]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^remove[1,0]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self. t<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self; t<self>_&_^remove[-1,0]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^shift[0,-1]_/t=_@f+all~_@f+all%self. t<self>_&_^shift[0,-1]_/t=_@f+all~_@f+all%self; t<self>_&_^remove[0,-1]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^shift[0,1]_/t=_@f+all~_@f+all%self. t<self>_&_^shift[0,1]_/t=_@f+all~_@f+all%self; t<self>_&_^remove[0,1]1/t=_@f+all~_@an_enemy_actor+all%self. t<self>_&_^shift[1,0]_/t=_@f+all~_@f+all%self. t<self>_&_^shift[1,0]_/t=_@f+all~_@f+all%self; t<self>_&_^remove[1,0]1/t=_@f+all~_@an_enemy_actor+all%self."
-
-gameplay.to_cgh
-# => "dcc5944dd91f82007904126bf2780a9922186b90"
-
-gameplay.dimensions
-# => 2
 ```
 
 ## Contributing

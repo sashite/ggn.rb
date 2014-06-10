@@ -4,33 +4,25 @@ require_relative 'subject'
 
 module Sashite
   module GGN
-    class Occupied
+    module Occupied
       PATTERN = /(#{Null::PATTERN}|#{Boolean::PATTERN}|#{Subject::PATTERN}|an_ally_actor|an_enemy_actor)/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+      def self.load io
+        raise ArgumentError unless valid? io
 
-        @value = if Null.valid? str
-          Null.instance
-        elsif Boolean.valid? str
-          Boolean.new str
-        elsif Subject.valid? str
-          Subject.new str
+        if Null.valid? io
+          Null.load
+        elsif Boolean.valid? io
+          Boolean.load io
+        elsif Subject.valid? io
+          Subject.load io
         else
-          str.to_sym
+          io.to_sym
         end
-      end
-
-      def as_json
-        @value.is_a?(Symbol) ? @value : @value.as_json
-      end
-
-      def to_s
-        @value.to_s
       end
     end
   end

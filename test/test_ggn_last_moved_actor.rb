@@ -1,51 +1,35 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::LastMovedActor do
-  describe '.new' do
-    describe 'false' do
+  subject { Sashite::GGN::LastMovedActor }
+
+  describe '.load' do
+    describe 'boolean' do
       before do
-        @last_moved_actor = Sashite::GGN::LastMovedActor.new('f')
+        @ggn_obj = 't'
       end
 
-      it 'returns the GGN as a JSON' do
-        @last_moved_actor.as_json.must_equal false
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal true
       end
 
-      it 'returns the GGN as a string' do
-        @last_moved_actor.to_s.must_equal 'f'
-      end
-    end
-
-    describe 'true' do
-      before do
-        @last_moved_actor = Sashite::GGN::LastMovedActor.new('t')
-      end
-
-      it 'returns the GGN as a JSON' do
-        @last_moved_actor.as_json.must_equal true
-      end
-
-      it 'returns the GGN as a string' do
-        @last_moved_actor.to_s.must_equal 't'
+      it 'raises an error' do
+        -> { subject.load 'true' }.must_raise ArgumentError
       end
     end
 
     describe 'null' do
       before do
-        @last_moved_actor = Sashite::GGN::LastMovedActor.new('_')
+        @ggn_obj = '_'
       end
 
-      it 'returns the GGN as a JSON' do
-        @last_moved_actor.as_json.must_equal nil
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal nil
       end
 
-      it 'returns the GGN as a string' do
-        @last_moved_actor.to_s.must_equal '_'
+      it 'raises an error' do
+        -> { subject.load '' }.must_raise ArgumentError
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::LastMovedActor.new('foobar') }.must_raise ArgumentError
   end
 end

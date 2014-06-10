@@ -1,21 +1,21 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::NegativeInteger do
-  describe '.new' do
+  subject { Sashite::GGN::NegativeInteger }
+
+  describe '.load' do
     before do
-      @negative_integer = Sashite::GGN::NegativeInteger.new('-42')
+      @ggn_obj = '-42'
     end
 
-    it 'returns the GGN as a JSON' do
-      @negative_integer.as_json.must_equal -42
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).must_equal -42
     end
 
-    it 'returns the GGN as a string' do
-      @negative_integer.to_s.must_equal '-42'
+    describe 'errors' do
+      it 'raises with an unsigned integer' do
+        -> { subject.load '4' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::NegativeInteger.new('42') }.must_raise ArgumentError
   end
 end

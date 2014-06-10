@@ -1,13 +1,16 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Pattern do
-  describe '.new' do
+  subject { Sashite::GGN::Pattern }
+
+  describe '.load' do
     before do
-      @pattern = Sashite::GGN::Pattern.new('t<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self; t<self>_&_^remove[-1,0]1/t=_@f+all~_@an_enemy_actor+all%self')
+      @ggn_obj = 't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self; ' +
+                 't<self>_&_^remove[-1,0]1/t=_@f+all~_@an_enemy_actor+all%self'
     end
 
-    it 'returns the GGN as a JSON' do
-      @pattern.as_json.hash.must_equal(
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).hash.must_equal(
         [
           {
             :"subject" => {
@@ -71,12 +74,11 @@ describe Sashite::GGN::Pattern do
       )
     end
 
-    it 'returns the GGN as a string' do
-      @pattern.to_s.must_equal 't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self; t<self>_&_^remove[-1,0]1/t=_@f+all~_@an_enemy_actor+all%self'
+    describe 'errors' do
+      it 'raises with several identical patterns' do
+        -> { subject.load 't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self; ' +
+                          't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Pattern.new('foobar') }.must_raise ArgumentError
   end
 end

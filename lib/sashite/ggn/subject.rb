@@ -4,33 +4,25 @@ require_relative 'state'
 
 module Sashite
   module GGN
-    class Subject
+    module Subject
       PATTERN = /#{Ally::PATTERN}<#{Actor::PATTERN}>#{State::PATTERN}/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      attr_reader :ally, :actor, :state
+      def self.load io
+        raise ArgumentError unless valid? io
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+        ally = Ally.load io.split('<').fetch(0)
+        actor = Actor.load io.split('<').fetch(1).split('>').fetch(0)
+        state = State.load io.split('>').fetch(1)
 
-        @ally = Ally.new str.split('<').fetch(0)
-        @actor = Actor.new str.split('<').fetch(1).split('>').fetch(0)
-        @state = State.new str.split('>').fetch(1)
-      end
-
-      def as_json
         {
-          :"...ally?" => @ally.as_json,
-          actor: @actor.as_json,
-          state: @state.as_json
+          :"...ally?" => ally,
+          actor: actor,
+          state: state
         }
-      end
-
-      def to_s
-        "#{@ally}<#{@actor}>#{@state}"
       end
     end
   end

@@ -1,41 +1,32 @@
-require_relative 'name'
 require_relative 'direction'
 require_relative 'maximum_magnitude'
+require_relative 'name'
 require_relative 'required'
 
 module Sashite
   module GGN
-    class Verb
+    module Verb
       PATTERN = /#{Name::PATTERN}\[#{Direction::PATTERN}\]#{MaximumMagnitude::PATTERN}\/#{Required::PATTERN}/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      attr_reader :name, :direction, :maximum_magnitude, :required
+      def self.load io
+        raise ArgumentError unless valid? io
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+        name = Name.load io.split('[').fetch 0
+        direction = Direction.load io.split('[').fetch(1).split(']').fetch 0
+        maximum_magnitude = MaximumMagnitude.load io.split(']').fetch(1).split('/').fetch 0
+        required = Required.load io.split('/').fetch 1
 
-        @name = Name.new str.split('[').fetch 0
-        @direction = Direction.new str.split('[').fetch(1).split(']').fetch 0
-        @maximum_magnitude = MaximumMagnitude.new str.split(']').fetch(1).split('/').fetch 0
-        @required = Required.new str.split('/').fetch 1
-      end
-
-      def as_json
         {
-          name: @name.as_json,
-          vector: {:"...maximum_magnitude" => @maximum_magnitude.as_json, direction: @direction.as_json}
+          name: name,
+          vector: {
+            :"...maximum_magnitude" => maximum_magnitude,
+            direction: direction
+          }
         }
-      end
-
-      def to_s
-        "#{@name}[#{@direction}]#{@maximum_magnitude}/#{@required}"
-      end
-
-      def dimensions
-        @direction.as_json.size
       end
     end
   end

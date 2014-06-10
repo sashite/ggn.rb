@@ -1,28 +1,24 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::State do
-  describe '.new' do
-    describe 'a state' do
-      before do
-        @state = Sashite::GGN::State.new('t&_')
-      end
+  subject { Sashite::GGN::State }
 
-      it 'returns the GGN as a JSON' do
-        @state.as_json.hash.must_equal(
-          {
-            :"...last_moved_actor?" => true,
-            :"...previous_moves_counter" => nil
-          }.hash
-        )
-      end
+  describe '.load' do
+    before do
+      @ggn_obj = 't&_'
+    end
 
-      it 'returns the GGN as a string' do
-        @state.to_s.must_equal 't&_'
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).hash.must_equal({
+        :"...last_moved_actor?" => true,
+        :"...previous_moves_counter" => nil
+      }.hash)
+    end
+
+    describe 'errors' do
+      it 'raises without a state' do
+        -> { subject.load 'foobar' }.must_raise ArgumentError
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::State.new('foobar') }.must_raise ArgumentError
   end
 end

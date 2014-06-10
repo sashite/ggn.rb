@@ -1,27 +1,25 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Square do
-  describe '.new' do
+  subject { Sashite::GGN::Square }
+
+  describe '.load' do
     before do
-      @square = Sashite::GGN::Square.new('_@an_enemy_actor+all')
+      @ggn_obj = '_@an_enemy_actor+all'
     end
 
-    it 'returns the GGN as a JSON' do
-      @square.as_json.hash.must_equal(
-        {
-          :"...attacked?" => nil,
-          :"...occupied!" => :an_enemy_actor,
-          :"area" => :all
-        }.hash
-      )
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).hash.must_equal({
+        :"...attacked?" => nil,
+        :"...occupied!" => :an_enemy_actor,
+        :"area" => :all
+      }.hash)
     end
 
-    it 'returns the GGN as a string' do
-      @square.to_s.must_equal '_@an_enemy_actor+all'
+    describe 'errors' do
+      it 'raises witout a square' do
+        -> { subject.load 'foobar' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Square.new('foo') }.must_raise ArgumentError
   end
 end

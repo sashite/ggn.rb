@@ -1,35 +1,33 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Object do
-  describe '.new' do
+  subject { Sashite::GGN::Object }
+
+  describe '.load' do
     before do
-      @object = Sashite::GGN::Object.new('_@f+all~_@f+all%self')
+      @ggn_obj = '_@f+all~_@f+all%self'
     end
 
-    it 'returns the GGN as a JSON' do
-      @object.as_json.hash.must_equal(
-        {
-          src_square: {
-            :"...attacked?" => nil,
-            :"...occupied!" => false,
-            area: :all
-          },
-          dst_square: {
-            :"...attacked?" => nil,
-            :"...occupied!" => false,
-            area: :all
-          },
-          promotable_into_actors: [:self]
-        }.hash
-      )
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).hash.must_equal({
+        src_square: {
+          :"...attacked?" => nil,
+          :"...occupied!" => false,
+          area: :all
+        },
+        dst_square: {
+          :"...attacked?" => nil,
+          :"...occupied!" => false,
+          area: :all
+        },
+        promotable_into_actors: [:self]
+      }.hash)
     end
 
-    it 'returns the GGN as a string' do
-      @object.to_s.must_equal '_@f+all~_@f+all%self'
+    describe 'errors' do
+      it 'raises without an object' do
+        -> { subject.load 'foo' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Object.new('foo') }.must_raise ArgumentError
   end
 end

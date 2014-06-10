@@ -1,13 +1,15 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Ability do
-  describe '.new' do
+  subject { Sashite::GGN::Ability }
+
+  describe '.load' do
     before do
-      @ability = Sashite::GGN::Ability.new('t<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self')
+      @ggn_obj = 't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self'
     end
 
-    it 'returns the GGN as a JSON' do
-      @ability.as_json.hash.must_equal(
+    it 'loads a document from the current io stream' do
+      subject.load(@ggn_obj).hash.must_equal(
         {
           subject: {
             :"...ally?" => true,
@@ -40,12 +42,10 @@ describe Sashite::GGN::Ability do
       )
     end
 
-    it 'returns the GGN as a string' do
-      @ability.to_s.must_equal 't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self'
+    describe 'errors' do
+      it 'raises without an ability' do
+        -> { subject.load 'foobar' }.must_raise ArgumentError
+      end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Ability.new('foobar') }.must_raise ArgumentError
   end
 end

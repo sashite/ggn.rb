@@ -1,21 +1,39 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::UnsignedInteger do
-  describe '.new' do
-    before do
-      @unsigned_integer = Sashite::GGN::UnsignedInteger.new('0')
+  subject { Sashite::GGN::UnsignedInteger }
+
+  describe '.load' do
+    describe 'a zero' do
+      before do
+        @ggn_obj = '0'
+      end
+
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal 0
+      end
+
+      describe 'errors' do
+        it 'raises with a double zero' do
+          -> { subject.load '00' }.must_raise ArgumentError
+        end
+      end
     end
 
-    it 'returns the GGN as a JSON' do
-      @unsigned_integer.as_json.must_equal 0
-    end
+    describe 'an unsigned integer excluding zero' do
+      before do
+        @ggn_obj = '42'
+      end
 
-    it 'returns the GGN as a string' do
-      @unsigned_integer.to_s.must_equal '0'
-    end
-  end
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal 42
+      end
 
-  it 'raises an error' do
-    -> { Sashite::GGN::UnsignedInteger.new('-42') }.must_raise ArgumentError
+      describe 'errors' do
+        it 'raises with a negative integer' do
+          -> { subject.load '-4' }.must_raise ArgumentError
+        end
+      end
+    end
   end
 end

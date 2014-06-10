@@ -1,102 +1,78 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Occupied do
-  describe '.new' do
-    describe 'an ally actor' do
+  subject { Sashite::GGN::Occupied }
+
+  describe '.load' do
+    describe 'a relationship' do
       before do
-        @occupied = Sashite::GGN::Occupied.new('an_ally_actor')
+        @ggn_obj = 'an_ally_actor'
       end
 
-      it 'returns the GGN as a JSON' do
-        @occupied.as_json.must_equal :an_ally_actor
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal :an_ally_actor
       end
 
-      it 'returns the GGN as a string' do
-        @occupied.to_s.must_equal 'an_ally_actor'
+      describe 'errors' do
+        it 'raises without a relationship' do
+          -> { subject.load 'foobar' }.must_raise ArgumentError
+        end
       end
     end
 
-    describe 'an enemy actor' do
+    describe 'a boolean' do
       before do
-        @occupied = Sashite::GGN::Occupied.new('an_enemy_actor')
+        @ggn_obj = 'f'
       end
 
-      it 'returns the GGN as a JSON' do
-        @occupied.as_json.must_equal :an_enemy_actor
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal false
       end
 
-      it 'returns the GGN as a string' do
-        @occupied.to_s.must_equal 'an_enemy_actor'
+      describe 'errors' do
+        it 'raises without a boolean' do
+          -> { subject.load 'foobar' }.must_raise ArgumentError
+        end
       end
     end
 
     describe 'null' do
       before do
-        @occupied = Sashite::GGN::Occupied.new('_')
+        @ggn_obj = '_'
       end
 
-      it 'returns the GGN as a JSON' do
-        @occupied.as_json.must_equal nil
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal nil
       end
 
-      it 'returns the GGN as a string' do
-        @occupied.to_s.must_equal '_'
-      end
-    end
-
-    describe 'true' do
-      before do
-        @occupied = Sashite::GGN::Occupied.new('t')
-      end
-
-      it 'returns the GGN as a JSON' do
-        @occupied.as_json.must_equal true
-      end
-
-      it 'returns the GGN as a string' do
-        @occupied.to_s.must_equal 't'
-      end
-    end
-
-    describe 'false' do
-      before do
-        @occupied = Sashite::GGN::Occupied.new('f')
-      end
-
-      it 'returns the GGN as a JSON' do
-        @occupied.as_json.must_equal false
-      end
-
-      it 'returns the GGN as a string' do
-        @occupied.to_s.must_equal 'f'
+      describe 'errors' do
+        it 'raises without null' do
+          -> { subject.load '' }.must_raise ArgumentError
+        end
       end
     end
 
     describe 'a subject' do
       before do
-        @occupied = Sashite::GGN::Occupied.new('f<self>_&_')
+        @ggn_obj = 'f<self>_&_'
       end
 
-      it 'returns the GGN as a JSON' do
-        @occupied.as_json.hash.must_equal(
-          {
-            :"...ally?" => false,
-            actor: :self,
-            state: {
-              :"...last_moved_actor?" => nil,
-              :"...previous_moves_counter" => nil
-            }
-          }.hash
-        )
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).hash.must_equal({
+          :"...ally?" => false,
+          actor: :self,
+          state: {
+            :"...last_moved_actor?" => nil,
+            :"...previous_moves_counter" => nil
+          }
+        }.hash)
       end
 
-      it 'returns the GGN as a string' do
-        @occupied.to_s.must_equal 'f<self>_&_'
+      describe 'errors' do
+        it 'raises without a well-formed subject' do
+          -> { subject.load 'f<foo>_&_' }.must_raise ArgumentError
+        end
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::Occupied.new('foobar') }.must_raise ArgumentError
   end
 end

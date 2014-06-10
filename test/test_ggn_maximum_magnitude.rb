@@ -1,37 +1,39 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::MaximumMagnitude do
-  describe '.new' do
+  subject { Sashite::GGN::MaximumMagnitude }
+
+  describe '.load' do
     describe 'null' do
       before do
-        @maximum_magnitude = Sashite::GGN::MaximumMagnitude.new('_')
+        @ggn_obj = '_'
       end
 
-      it 'returns the GGN as a JSON' do
-        @maximum_magnitude.as_json.must_equal nil
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal nil
       end
 
-      it 'returns the GGN as a string' do
-        @maximum_magnitude.to_s.must_equal '_'
+      describe 'errors' do
+        it 'raises an error' do
+          -> { subject.load 'foobar' }.must_raise ArgumentError
+        end
       end
     end
 
-    describe 'unsigned integer' do
+    describe 'an unsigned integer' do
       before do
-        @maximum_magnitude = Sashite::GGN::MaximumMagnitude.new('42')
+        @ggn_obj = '42'
       end
 
-      it 'returns the GGN as a JSON' do
-        @maximum_magnitude.as_json.must_equal 42
+      it 'loads a document from the current io stream' do
+        subject.load(@ggn_obj).must_equal 42
       end
 
-      it 'returns the GGN as a string' do
-        @maximum_magnitude.to_s.must_equal '42'
+      describe 'errors' do
+        it 'raises an error' do
+          -> { subject.load '-4' }.must_raise ArgumentError
+        end
       end
     end
-  end
-
-  it 'raises an error' do
-    -> { Sashite::GGN::MaximumMagnitude.new('0') }.must_raise ArgumentError
   end
 end

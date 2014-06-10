@@ -2,27 +2,18 @@ require_relative 'ability'
 
 module Sashite
   module GGN
-    class Pattern
+    module Pattern
       PATTERN = /#{Ability::PATTERN}(; #{Ability::PATTERN})*/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        io.match("^#{PATTERN}$") &&
+        io.split('; ').uniq.join('; ') == io
       end
 
-      attr_reader :abilities
+      def self.load io
+        raise ArgumentError unless valid? io
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
-
-        @abilities = str.split('; ').map { |ability| Ability.new ability }
-      end
-
-      def as_json
-        @abilities.map &:as_json
-      end
-
-      def to_s
-        @abilities.map(&:to_s).join '; '
+        io.split('; ').map { |ability| Ability.load ability }
       end
     end
   end

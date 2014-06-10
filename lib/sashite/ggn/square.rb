@@ -4,33 +4,25 @@ require_relative 'area'
 
 module Sashite
   module GGN
-    class Square
+    module Square
       PATTERN = /#{Attacked::PATTERN}@#{Occupied::PATTERN}\+#{Area::PATTERN}/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        !!io.match("^#{PATTERN}$")
       end
 
-      attr_reader :attacked, :occupied, :area
+      def self.load io
+        raise ArgumentError unless valid? io
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
+        attacked = Attacked.load io.split('@').fetch(0)
+        occupied = Occupied.load io.split('@').fetch(1).split('+').fetch(0)
+        area = Area.load io.split('+').fetch(1)
 
-        @attacked = Attacked.new str.split('@').fetch(0)
-        @occupied = Occupied.new str.split('@').fetch(1).split('+').fetch(0)
-        @area = Area.new str.split('+').fetch(1)
-      end
-
-      def as_json
         {
-          :"...attacked?" => @attacked.as_json,
-          :"...occupied!" => @occupied.as_json,
-          :"area" => @area.as_json
+          :"...attacked?" => attacked,
+          :"...occupied!" => occupied,
+          :"area" => area
         }
-      end
-
-      def to_s
-        "#{@attacked}@#{@occupied}+#{@area}"
       end
     end
   end

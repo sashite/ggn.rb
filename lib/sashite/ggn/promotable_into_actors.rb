@@ -3,29 +3,20 @@ require_relative 'gameplay_into_base64'
 
 module Sashite
   module GGN
-    class PromotableIntoActors
+    module PromotableIntoActors
       PATTERN = /(#{GameplayIntoBase64::PATTERN},)*#{Actor::PATTERN}/
 
-      def self.valid? str
-        !!str.match("^#{PATTERN}$")
+      def self.valid? io
+        io.match("^#{PATTERN}$") &&
+        io.split(',').uniq.join(',') == io
       end
 
-      attr_reader :values
+      def self.load io
+        raise ArgumentError unless valid? io
 
-      def initialize str
-        raise ArgumentError unless self.class.valid? str
-
-        @values = str.split(',').map do |value|
-          Actor.valid?(value) ? Actor.new(value) : GameplayIntoBase64.new(value)
+        io.split(',').map do |value|
+          Actor.valid?(value) ? Actor.load(value) : GameplayIntoBase64.load(value)
         end
-      end
-
-      def as_json
-        @values.map &:as_json
-      end
-
-      def to_s
-        @values.map(&:to_s).join ','
       end
     end
   end
