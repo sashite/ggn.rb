@@ -1,51 +1,41 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Ability do
-  subject { Sashite::GGN::Ability }
+  subject { Sashite::GGN::Ability.new }
 
-  describe '.load' do
-    before do
-      @ggn_obj = 't<self>_&_^shift[-1,0]_/t=_@f+all~_@f+all%self'
+  describe '#subject' do
+    it 'responds to subject' do
+      subject.must_respond_to :subject
     end
+  end
 
-    it 'loads a document from the current io stream' do
-      subject.load(@ggn_obj).hash.must_equal(
-        {
-          subject: {
-            :"...ally?" => true,
-            :"actor" => :self,
-            :"state" => {
-              :"...last_moved_actor?" => nil,
-              :"...previous_moves_counter" => nil
-            }
-          },
-
-          verb: {
-            name: :shift,
-            vector: {direction: [-1,0], :"...maximum_magnitude" => nil}
-          },
-
-          object: {
-            src_square: {
-              :"...attacked?" => nil,
-              :"...occupied!" => false,
-              area: :all
-            },
-            dst_square: {
-              :"...attacked?" => nil,
-              :"...occupied!" => false,
-              area: :all
-            },
-            promotable_into_actors: [:self]
-          }
-        }.hash
-      )
+  describe '#subject=' do
+    it 'responds to subject=' do
+      subject.must_respond_to :subject=
     end
+  end
 
-    describe 'errors' do
-      it 'raises without an ability' do
-        -> { subject.load 'foobar' }.must_raise ArgumentError
-      end
+  describe '#verb' do
+    it 'responds to verb' do
+      subject.must_respond_to :verb
+    end
+  end
+
+  describe '#verb=' do
+    it 'responds to verb=' do
+      subject.must_respond_to :verb=
+    end
+  end
+
+  describe '#object' do
+    it 'responds to object' do
+      subject.must_respond_to :object
+    end
+  end
+
+  describe '#object=' do
+    it 'responds to object=' do
+      subject.must_respond_to :object=
     end
   end
 end

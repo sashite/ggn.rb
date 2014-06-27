@@ -1,25 +1,41 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Square do
-  subject { Sashite::GGN::Square }
+  subject { Sashite::GGN::Square.new }
 
-  describe '.load' do
-    before do
-      @ggn_obj = '_@an_enemy_actor+all'
+  describe '#attacked' do
+    it 'responds to attacked' do
+      subject.must_respond_to :attacked
     end
+  end
 
-    it 'loads a document from the current io stream' do
-      subject.load(@ggn_obj).hash.must_equal({
-        :"...attacked?" => nil,
-        :"...occupied!" => :an_enemy_actor,
-        :"area" => :all
-      }.hash)
+  describe '#attacked=' do
+    it 'responds to attacked=' do
+      subject.must_respond_to :attacked=
     end
+  end
 
-    describe 'errors' do
-      it 'raises witout a square' do
-        -> { subject.load 'foobar' }.must_raise ArgumentError
-      end
+  describe '#occupied' do
+    it 'responds to occupied' do
+      subject.must_respond_to :occupied
+    end
+  end
+
+  describe '#occupied=' do
+    it 'responds to occupied=' do
+      subject.must_respond_to :occupied=
+    end
+  end
+
+  describe '#area' do
+    it 'responds to area' do
+      subject.must_respond_to :area
+    end
+  end
+
+  describe '#area=' do
+    it 'responds to area=' do
+      subject.must_respond_to :area=
     end
   end
 end

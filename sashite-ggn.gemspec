@@ -3,8 +3,8 @@ Gem::Specification.new do |spec|
   spec.version       = File.read('VERSION.semver')
   spec.authors       = ['Cyril Wack']
   spec.email         = ['contact@cyril.io']
-  spec.summary       = %q{General Gameplay Notation.}
-  spec.description   = %q{A Ruby interface for data serialization in GGN format.}
+  spec.summary       = %q{Some mappers for GGN objects}
+  spec.description   = %q{A Ruby interface for GGN (General Gameplay Notation) objects.}
   spec.homepage      = 'https://github.com/sashite/ggn.rb'
   spec.license       = 'MIT'
 

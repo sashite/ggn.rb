@@ -1,33 +1,41 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Object do
-  subject { Sashite::GGN::Object }
+  subject { Sashite::GGN::Object.new }
 
-  describe '.load' do
-    before do
-      @ggn_obj = '_@f+all~_@f+all%self'
+  describe '#src_square' do
+    it 'responds to src_square' do
+      subject.must_respond_to :src_square
     end
+  end
 
-    it 'loads a document from the current io stream' do
-      subject.load(@ggn_obj).hash.must_equal({
-        src_square: {
-          :"...attacked?" => nil,
-          :"...occupied!" => false,
-          area: :all
-        },
-        dst_square: {
-          :"...attacked?" => nil,
-          :"...occupied!" => false,
-          area: :all
-        },
-        promotable_into_actors: [:self]
-      }.hash)
+  describe '#src_square=' do
+    it 'responds to src_square=' do
+      subject.must_respond_to :src_square=
     end
+  end
 
-    describe 'errors' do
-      it 'raises without an object' do
-        -> { subject.load 'foo' }.must_raise ArgumentError
-      end
+  describe '#dst_square' do
+    it 'responds to dst_square' do
+      subject.must_respond_to :dst_square
+    end
+  end
+
+  describe '#dst_square=' do
+    it 'responds to dst_square=' do
+      subject.must_respond_to :dst_square=
+    end
+  end
+
+  describe '#promotable_into_actors' do
+    it 'responds to promotable_into_actors' do
+      subject.must_respond_to :promotable_into_actors
+    end
+  end
+
+  describe '#promotable_into_actors=' do
+    it 'responds to promotable_into_actors=' do
+      subject.must_respond_to :promotable_into_actors=
     end
   end
 end

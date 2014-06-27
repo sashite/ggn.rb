@@ -1,27 +1,29 @@
 require_relative '_test_helper'
 
 describe Sashite::GGN::Verb do
-  subject { Sashite::GGN::Verb }
+  subject { Sashite::GGN::Verb.new }
 
-  describe '.load' do
-    before do
-      @ggn_obj = 'shift[4,2]42/t'
+  describe '#name' do
+    it 'responds to name' do
+      subject.must_respond_to :name
     end
+  end
 
-    it 'loads a document from the current io stream' do
-      subject.load(@ggn_obj).hash.must_equal({
-        name: :shift,
-        vector: {
-          direction: [4,2],
-          :"...maximum_magnitude" => 42
-        }
-      }.hash)
+  describe '#name=' do
+    it 'responds to name=' do
+      subject.must_respond_to :name=
     end
+  end
 
-    describe 'errors' do
-      it 'raises without a verb structure' do
-        -> { subject.load 'foobar' }.must_raise ArgumentError
-      end
+  describe '#vector' do
+    it 'responds to vector' do
+      subject.must_respond_to :vector
+    end
+  end
+
+  describe '#vector=' do
+    it 'responds to vector=' do
+      subject.must_respond_to :vector=
     end
   end
 end
