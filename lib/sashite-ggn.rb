@@ -21,7 +21,7 @@
 #   require "sashite/ggn"
 #
 #   piece_data = Sashite::Ggn.load_file("chess_moves.json")
-#   engine = piece_data.fetch("CHESS:P").fetch("e2").fetch("e4")
+#   engine = piece_data.select("CHESS:P").from("e2").to("e4")
 #
 #   # Check if the move is valid given current board state
 #   board_state = {
@@ -45,7 +45,7 @@
 # @example Piece drops in Shogi
 #   # Shogi allows captured pieces to be dropped back onto the board
 #   piece_data = Sashite::Ggn.load_file("shogi_moves.json")
-#   engine = piece_data.fetch("SHOGI:P").fetch("*").fetch("5e")
+#   engine = piece_data.select("SHOGI:P").from("*").to("5e")
 #
 #   # Player has captured pawns available
 #   captures = { "SHOGI:P" => 2 }
@@ -68,7 +68,7 @@
 # @example Captures with piece promotion
 #   # A chess pawn capturing and promoting to queen
 #   piece_data = Sashite::Ggn.load_file("chess_moves.json")
-#   engine = piece_data.fetch("CHESS:P").fetch("g7").fetch("h8")
+#   engine = piece_data.select("CHESS:P").from("g7").to("h8")
 #
 #   # Board with enemy piece on h8
 #   board_state = {

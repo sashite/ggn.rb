@@ -7,3 +7,4 @@ gemspec
 gem "bundler"
 gem "irb"
 gem "rake"
+gem "yard"

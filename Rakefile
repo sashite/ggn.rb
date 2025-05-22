@@ -2,6 +2,7 @@
 
 require "bundler/gem_tasks"
 require "rake/testtask"
+require "yard"
 
 Rake::TestTask.new do |t|
   t.pattern = "test/**/test_*.rb"
@@ -9,8 +10,9 @@ Rake::TestTask.new do |t|
   t.warning = true
 end
 
-Dir["tasks/**/*.rake"].each { |t| load t }
+YARD::Rake::YardocTask.new
 
 task default: %i[
   test
+  yard
 ]

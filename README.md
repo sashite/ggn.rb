@@ -399,13 +399,13 @@ end
 
 GGN works alongside other Sashité specifications:
 
-- **[GAN](https://sashite.dev/documents/gan/1.0.0/)** (General Actor Notation): Unique piece identifiers
-- **[FEEN](https://sashite.dev/documents/feen/1.0.0/)** (Forsyth-Edwards Enhanced Notation): Board position representation
-- **[PMN](https://sashite.dev/documents/pmn/1.0.0/)** (Portable Move Notation): Move sequence representation
+- [GAN](https://sashite.dev/documents/gan/) (General Actor Notation): Unique piece identifiers
+- [FEEN](https://sashite.dev/documents/feen/) (Forsyth-Edwards Enhanced Notation): Board position representation
+- [PMN](https://sashite.dev/documents/pmn/) (Portable Move Notation): Move sequence representation
 
 ## Documentation
 
-- [Official GGN Specification](https://sashite.dev/documents/ggn/1.0.0/)
+- [Official GGN Specification](https://sashite.dev/documents/ggn/)
 - [JSON Schema](https://sashite.dev/schemas/ggn/1.0.0/schema.json)
 - [API Documentation](https://rubydoc.info/github/sashite/ggn.rb/main)
 

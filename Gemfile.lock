@@ -36,6 +36,7 @@ GEM
       io-console (~> 0.5)
     simpleidn (0.2.3)
     stringio (3.1.7)
+    yard (0.9.37)
 
 PLATFORMS
   arm64-darwin-24
@@ -46,6 +47,7 @@ DEPENDENCIES
   irb
   rake
   sashite-ggn!
+  yard
 
 BUNDLED WITH
    2.4.12

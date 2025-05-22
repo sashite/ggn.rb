@@ -17,16 +17,16 @@ module Sashite
   # piece, currently on this square, reach that square?" while remaining neutral about
   # higher-level game rules like check, ko, repetition, or castling paths.
   #
-  # ## Key Features
+  # = Key Features
   #
   # - **Rule-agnostic**: Works with any abstract strategy board game
-  # - **Pseudo-legal focus**: Describes basic movement constraints only
+  # - **Pseudo-legal** focus: Describes basic movement constraints only
   # - **JSON-based**: Structured, machine-readable format
-  # - **Validation support**: Built-in schema validation
-  # - **Performance optimized**: Optional validation for large datasets
-  # - **Cross-game compatible**: Supports hybrid games and variants
+  # - **Validation** support: Built-in schema validation
+  # - **Performance** optimized: Optional validation for large datasets
+  # - **Cross-game** compatible: Supports hybrid games and variants
   #
-  # ## Related Specifications
+  # = Related Specifications
   #
   # GGN works alongside other Sashité specifications:
   # - **GAN** (General Actor Notation): Unique piece identifiers
@@ -66,7 +66,7 @@ module Sashite
       # @example Loading a chess piece definition with full validation
       #   begin
       #     piece_data = Sashite::Ggn.load_file('data/chess_pieces.json')
-      #     chess_king_source = piece_data.fetch('CHESS:K')
+      #     chess_king_source = piece_data.select('CHESS:K')
       #     puts "Loaded chess king movement rules successfully"
       #   rescue Sashite::Ggn::ValidationError => e
       #     puts "Failed to load chess pieces: #{e.message}"
@@ -75,9 +75,9 @@ module Sashite
       # @example Complete workflow with move evaluation
       #   begin
       #     piece_data = Sashite::Ggn.load_file('data/chess.json')
-      #     source = piece_data.fetch('CHESS:K')
-      #     destinations = source.fetch('e1')
-      #     engine = destinations.fetch('e2')
+      #     source = piece_data.select('CHESS:K')
+      #     destinations = source.from('e1')
+      #     engine = destinations.to('e2')
       #
       #     board_state = { 'e1' => 'CHESS:K', 'e2' => nil }
       #     result = engine.evaluate(board_state, {}, 'CHESS')
@@ -143,7 +143,7 @@ module Sashite
       #
       #   begin
       #     piece_data = Sashite::Ggn.load_string(ggn_json)
-      #     pawn_source = piece_data.fetch('CHESS:P')
+      #     pawn_source = piece_data.select('CHESS:P')
       #     puts "Loaded pawn with move from e2 to e4"
       #   rescue Sashite::Ggn::ValidationError => e
       #     puts "Invalid GGN data: #{e.message}"
@@ -190,7 +190,7 @@ module Sashite
       #   }
       #
       #   piece_data = Sashite::Ggn.load_hash(ggn_data)
-      #   shogi_king = piece_data.fetch('SHOGI:K')
+      #   shogi_king = piece_data.select('SHOGI:K')
       def load_hash(data, validate: true)
         unless data.is_a?(Hash)
           raise ValidationError, "Expected Hash, got #{data.class}"
