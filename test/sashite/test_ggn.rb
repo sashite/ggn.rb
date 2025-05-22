@@ -445,6 +445,68 @@ drop_result = drop_engine.where(blocked_drop_board, captures_with_pawn, "SHOGI")
 raise unless drop_result.nil?
 puts "    ✓ Invalid Shogi pawn drop (blocked file) correctly rejected"
 
+# Test promoted piece drop from base form in hand
+puts "  Testing promoted piece drop from base form in hand..."
+
+promoted_drop_ggn_data = {
+  "SHOGI:+P" => {  # Promoted pawn drop (tokin)
+    "*" => {
+      "5e" => [
+        {
+          "require" => { "5e" => "empty" },
+          "perform" => { "5e" => "SHOGI:+P" },  # Places promoted pawn on board
+          "drop" => "SHOGI:P"  # But removes base form from hand
+        }
+      ]
+    }
+  }
+}
+
+promoted_drop_piece = Sashite::Ggn::Piece.new(promoted_drop_ggn_data)
+promoted_drop_engine = promoted_drop_piece.select("SHOGI:+P").from("*").to("5e")
+
+# Valid promoted drop (base form available in hand)
+# This tests the key behavior: requesting "SHOGI:+P" drop while having "SHOGI:P" in hand
+empty_board = { "5e" => nil }
+captures_with_base_pawn = { "SHOGI:P" => 1 }  # Only base form in hand
+
+promoted_drop_result = promoted_drop_engine.where(empty_board, captures_with_base_pawn, "SHOGI")
+raise unless promoted_drop_result
+raise unless promoted_drop_result.drop == "SHOGI:P"  # Base form removed from hand
+raise unless promoted_drop_result.diff == { "5e" => "SHOGI:+P" }  # Promoted form placed on board
+puts "    ✓ Can drop promoted piece when base form is available in hand"
+
+# Invalid promoted drop (no base form in hand)
+promoted_drop_result = promoted_drop_engine.where(empty_board, {}, "SHOGI")
+raise unless promoted_drop_result.nil?
+puts "    ✓ Cannot drop promoted piece when base form not available in hand"
+
+# Invalid promoted drop (promoted form in hand - this should raise ArgumentError per GGN spec)
+captures_with_promoted_only = { "SHOGI:+P" => 1 }  # Invalid: promoted form in hand
+begin
+  promoted_drop_result = promoted_drop_engine.where(empty_board, captures_with_promoted_only, "SHOGI")
+  raise "Should have raised ArgumentError for promoted piece in captures"
+rescue ArgumentError => e
+  raise unless e.message.include?("Invalid base GAN identifier in captures")
+  raise unless e.message.include?("SHOGI:+P")
+end
+puts "    ✓ Correctly rejects promoted piece identifiers in captures (per GGN spec)"
+
+# Verify the base piece extraction logic works correctly
+test_engine = promoted_drop_engine
+extracted_base = test_engine.send(:extract_base_piece, "SHOGI:+P")
+raise unless extracted_base == "SHOGI:P"
+puts "    ✓ Base piece extraction correctly strips modifiers from promoted pieces"
+
+# Test with other modifiers for completeness
+extracted_base = test_engine.send(:extract_base_piece, "GAME:-X")
+raise unless extracted_base == "GAME:X"
+extracted_base = test_engine.send(:extract_base_piece, "GAME:Y'")
+raise unless extracted_base == "GAME:Y"
+extracted_base = test_engine.send(:extract_base_piece, "GAME:+Z'")
+raise unless extracted_base == "GAME:Z"
+puts "    ✓ Base piece extraction works with all modifier combinations"
+
 # Test promoted piece handling
 puts "  Testing promoted piece handling..."
 
