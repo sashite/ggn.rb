@@ -2,7 +2,7 @@
 
 module Sashite
   module Ggn
-    class Piece
+    class Ruleset
       class Source
         class Destination
           class Engine

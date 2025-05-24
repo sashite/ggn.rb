@@ -4,7 +4,7 @@ require_relative File.join("source", "destination")
 
 module Sashite
   module Ggn
-    class Piece
+    class Ruleset
       # Represents the possible source positions for a specific piece type.
       #
       # A Source instance contains all the starting positions from which

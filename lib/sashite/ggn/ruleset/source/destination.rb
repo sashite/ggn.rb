@@ -4,7 +4,7 @@ require_relative File.join("destination", "engine")
 
 module Sashite
   module Ggn
-    class Piece
+    class Ruleset
       class Source
         # Represents the possible destination squares for a piece from a specific source.
         #

@@ -4,7 +4,7 @@ require 'json'
 require 'json_schemer'
 require 'pathname'
 
-require_relative File.join("ggn", "piece")
+require_relative File.join("ggn", "ruleset")
 require_relative File.join("ggn", "schema")
 require_relative File.join("ggn", "validation_error")
 
@@ -45,7 +45,7 @@ module Sashite
       # 1. Reads the JSON file from the filesystem with proper encoding
       # 2. Parses the JSON content into a Ruby Hash with error handling
       # 3. Optionally validates the structure against the GGN JSON Schema
-      # 4. Creates and returns a Piece instance for querying moves
+      # 4. Creates and returns a Ruleset instance for querying moves
       #
       # @param filepath [String, Pathname] Path to the GGN JSON file to load.
       #   Supports both relative and absolute paths.
@@ -54,7 +54,7 @@ module Sashite
       # @param encoding [String] File encoding to use when reading (default: 'UTF-8').
       #   Most GGN files should use UTF-8 encoding.
       #
-      # @return [Piece] A Piece instance containing the parsed and validated GGN data.
+      # @return [Ruleset] A Ruleset instance containing the parsed and validated GGN data.
       #   Use this instance to query pseudo-legal moves for specific pieces and positions.
       #
       # @raise [ValidationError] If any of the following conditions occur:
@@ -122,8 +122,8 @@ module Sashite
         # Validate against GGN schema if requested
         validate_schema(data, file_path) if validate
 
-        # Create and return Piece instance
-        Piece.new(data)
+        # Create and return Ruleset instance
+        Ruleset.new(data)
       end
 
       # Loads GGN data directly from a JSON string.
@@ -134,7 +134,7 @@ module Sashite
       # @param json_string [String] JSON string containing GGN data
       # @param validate [Boolean] Whether to validate against GGN schema (default: true)
       #
-      # @return [Piece] A Piece instance containing the parsed GGN data
+      # @return [Ruleset] A Ruleset instance containing the parsed GGN data
       #
       # @raise [ValidationError] If the JSON is invalid or doesn't conform to GGN schema
       #
@@ -163,19 +163,19 @@ module Sashite
         # Validate against GGN schema if requested
         validate_schema(data, "<string>") if validate
 
-        # Create and return Piece instance
-        Piece.new(data)
+        # Create and return Ruleset instance
+        Ruleset.new(data)
       end
 
       # Loads GGN data from a Ruby Hash.
       #
       # This method is useful when you already have parsed JSON data as a Hash
-      # and want to create a GGN Piece instance with optional validation.
+      # and want to create a GGN Ruleset instance with optional validation.
       #
       # @param data [Hash] Ruby Hash containing GGN data structure
       # @param validate [Boolean] Whether to validate against GGN schema (default: true)
       #
-      # @return [Piece] A Piece instance containing the GGN data
+      # @return [Ruleset] A Ruleset instance containing the GGN data
       #
       # @raise [ValidationError] If the data doesn't conform to GGN schema (when validation enabled)
       #
@@ -199,14 +199,14 @@ module Sashite
         # Validate against GGN schema if requested
         validate_schema(data, "<hash>") if validate
 
-        # Create and return Piece instance
-        Piece.new(data)
+        # Create and return Ruleset instance
+        Ruleset.new(data)
       end
 
       # Validates a data structure against the GGN JSON Schema.
       #
       # This method can be used independently to validate GGN data without
-      # creating a Piece instance. Useful for pre-validation or testing.
+      # creating a Ruleset instance. Useful for pre-validation or testing.
       #
       # @param data [Hash] The data structure to validate
       # @param context [String] Context information for error messages (default: "<data>")
