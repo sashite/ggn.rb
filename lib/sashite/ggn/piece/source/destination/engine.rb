@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative File.join("..", "..", "..", "move_validator")
 require_relative File.join("engine", "transition")
 
 module Sashite
@@ -18,10 +19,7 @@ module Sashite
           #   result = engine.where(board_state, {}, 'CHESS')
           #   puts "Move valid!" if result
           class Engine
-            # Reserved square identifier for piece drops from hand
-            DROP_ORIGIN = "*"
-
-            private_constant :DROP_ORIGIN
+            include MoveValidator
 
             # Creates a new Engine with conditional transition rules.
             #
@@ -86,6 +84,24 @@ module Sashite
             end
 
             private
+
+            # Validates the move context before checking pseudo-legality.
+            # Uses the shared MoveValidator module for consistency.
+            #
+            # @param board_state [Hash] Current board state
+            # @param captures [Hash] Available pieces in hand
+            # @param turn [String] Current player's game identifier
+            #
+            # @return [Boolean] true if the move context is valid
+            def valid_move_context?(board_state, captures, turn)
+              if @origin == DROP_ORIGIN
+                return false unless piece_available_in_hand?(@actor, captures)
+              else
+                return false unless piece_on_board_at_origin?(@actor, @origin, board_state)
+              end
+
+              piece_belongs_to_current_player?(@actor, turn)
+            end
 
             # Validates all parameters in one consolidated method.
             #
@@ -267,71 +283,6 @@ module Sashite
               return false if identifier.empty?
 
               /\A([A-Z]+|[a-z]+)\z/.match?(identifier)
-            end
-
-            # Validates the move context before checking pseudo-legality.
-            #
-            # @param board_state [Hash] Current board state
-            # @param captures [Hash] Available pieces in hand
-            # @param turn [String] Current player's game identifier
-            #
-            # @return [Boolean] true if the move context is valid
-            def valid_move_context?(board_state, captures, turn)
-              if @origin == DROP_ORIGIN
-                return false unless piece_available_in_hand?(captures)
-              else
-                return false unless piece_on_board_at_origin?(board_state)
-              end
-
-              piece_belongs_to_current_player?(turn)
-            end
-
-            # Checks if the piece is available in the player's hand for drop moves.
-            #
-            # @param captures [Hash] Available pieces in hand
-            #
-            # @return [Boolean] true if piece is available for dropping
-            def piece_available_in_hand?(captures)
-              base_piece = extract_base_piece(@actor)
-              (captures[base_piece] || 0) > 0
-            end
-
-            # Checks if the piece is on the board at the origin square.
-            #
-            # @param board_state [Hash] Current board state
-            #
-            # @return [Boolean] true if the correct piece is at the origin
-            def piece_on_board_at_origin?(board_state)
-              board_state[@origin] == @actor
-            end
-
-            # Checks if the piece belongs to the current player.
-            #
-            # @param turn [String] Current player's game identifier
-            #
-            # @return [Boolean] true if piece belongs to current player
-            def piece_belongs_to_current_player?(turn)
-              return false unless @actor.include?(':')
-
-              game_part = @actor.split(':', 2).fetch(0)
-              piece_is_uppercase_player = game_part == game_part.upcase
-              current_is_uppercase_player = turn == turn.upcase
-
-              piece_is_uppercase_player == current_is_uppercase_player
-            end
-
-            # Extracts the base form of a piece (removes modifiers).
-            #
-            # @param actor [String] Full GAN identifier
-            #
-            # @return [String] Base form suitable for hand storage
-            def extract_base_piece(actor)
-              return actor unless actor.include?(':')
-
-              game_part, piece_part = actor.split(':', 2)
-              clean_piece = piece_part.gsub(/\A[-+]?([A-Za-z])'?\z/, '\1')
-
-              "#{game_part}:#{clean_piece}"
             end
 
             # Checks if a transition matches the current board state.

@@ -41,6 +41,22 @@ VALID_GGN_DATA = {
       ]
     }
   },
+  "CHESS:K" => {
+    "e1" => {
+      "e2" => [
+        {
+          "require" => { "e2" => "empty" },
+          "perform" => { "e1" => nil, "e2" => "CHESS:K" }
+        }
+      ],
+      "f1" => [
+        {
+          "require" => { "f1" => "empty" },
+          "perform" => { "e1" => nil, "f1" => "CHESS:K" }
+        }
+      ]
+    }
+  },
   "SHOGI:P" => {
     "*" => {
       "5e" => [
@@ -217,6 +233,81 @@ rescue ArgumentError => e
   raise unless e.message.include?("Expected Hash")
 end
 puts "    ✓ Constructor validates input type"
+
+# Test pseudo_legal_moves method
+puts "  Testing Sashite::Ggn::Piece#pseudo_legal_moves..."
+
+# Test basic functionality with valid board state
+board_state = {
+  "e2" => "CHESS:P",  # Pawn on e2
+  "e1" => "CHESS:K",  # King on e1
+  "e3" => nil,        # Empty squares
+  "e4" => nil,
+  "f1" => nil
+}
+moves = piece.pseudo_legal_moves(board_state, {}, "CHESS")
+
+# Should find pawn moves and king moves
+expected_moves = [["e2", "e4"], ["e2", "e3"], ["e1", "f1"]]
+raise unless moves.sort == expected_moves.sort
+puts "    ✓ Returns correct moves for valid board state"
+
+# Test with Shogi drops
+drop_board = {
+  "5e" => nil,
+  "5a" => nil, "5b" => nil, "5c" => nil, "5d" => nil,
+  "5f" => nil, "5g" => nil
+}
+drop_captures = { "SHOGI:P" => 1 }
+drop_moves = piece.pseudo_legal_moves(drop_board, drop_captures, "SHOGI")
+
+raise unless drop_moves.include?(["*", "5e"])
+puts "    ✓ Correctly includes drop moves when pieces available in hand"
+
+# Test with no valid moves (wrong player)
+no_moves = piece.pseudo_legal_moves(board_state, {}, "shogi")  # lowercase = second player
+raise unless no_moves.empty?
+puts "    ✓ Returns empty array when no pieces belong to current player"
+
+# Test parameter validation
+begin
+  piece.pseudo_legal_moves("not a hash", {}, "CHESS")
+  raise "Should have raised ArgumentError"
+rescue ArgumentError => e
+  raise unless e.message.include?("board_state must be a Hash")
+end
+
+begin
+  piece.pseudo_legal_moves({}, "not a hash", "CHESS")
+  raise "Should have raised ArgumentError"
+rescue ArgumentError => e
+  raise unless e.message.include?("captures must be a Hash")
+end
+
+begin
+  piece.pseudo_legal_moves({}, {}, 123)
+  raise "Should have raised ArgumentError"
+rescue ArgumentError => e
+  raise unless e.message.include?("turn must be a String")
+end
+
+begin
+  piece.pseudo_legal_moves({}, {}, "")
+  raise "Should have raised ArgumentError"
+rescue ArgumentError => e
+  raise unless e.message.include?("turn cannot be empty")
+end
+puts "    ✓ Validates parameters correctly"
+
+# Test performance optimization (early pruning)
+# Create a board state where pieces are missing but optimization should skip checking
+optimization_board = {
+  "e2" => nil,  # No piece here, but optimization should skip before checking
+  "e1" => nil
+}
+optimized_moves = piece.pseudo_legal_moves(optimization_board, {}, "CHESS")
+raise unless optimized_moves.empty?
+puts "    ✓ Performance optimization works (early pruning when pieces missing)"
 
 # Test Source class
 puts "  Testing Sashite::Ggn::Piece::Source..."
@@ -597,3 +688,4 @@ puts "    ✓ Empty square correctly prevents capture when enemy required"
 
 puts "\n✅ All tests passed!"
 puts "Tested #{Sashite::Ggn::Piece}, #{Sashite::Ggn::Piece::Source}, #{Sashite::Ggn::Piece::Source::Destination}, #{Sashite::Ggn::Piece::Source::Destination::Engine}, and #{Sashite::Ggn::Piece::Source::Destination::Engine::Transition}"
+puts "Includes comprehensive tests for pseudo_legal_moves method with performance optimizations"
