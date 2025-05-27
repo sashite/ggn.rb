@@ -12,14 +12,15 @@ module Sashite
   # General Gameplay Notation (GGN) module for parsing, validating, and working with
   # JSON documents that describe pseudo-legal moves in abstract strategy board games.
   #
-  # GGN is a rule-agnostic format that focuses on basic movement constraints rather
-  # than game-specific legality rules. It answers the fundamental question: "Can this
-  # piece, currently on this square, reach that square?" while remaining neutral about
-  # higher-level game rules like check, ko, repetition, or castling paths.
+  # GGN is a rule-agnostic format that focuses exclusively on board-to-board transformations.
+  # It answers the fundamental question: "Can this piece, currently on this square, reach
+  # that square?" while remaining neutral about higher-level game rules like check, ko,
+  # repetition, or castling paths.
   #
   # = Key Features
   #
   # - **Rule-agnostic**: Works with any abstract strategy board game
+  # - **Board-focused**: Describes only board transformations, no hand management
   # - **Pseudo-legal** focus: Describes basic movement constraints only
   # - **JSON-based**: Structured, machine-readable format
   # - **Validation** support: Built-in schema validation
@@ -80,8 +81,8 @@ module Sashite
       #     engine = destinations.to('e2')
       #
       #     board_state = { 'e1' => 'CHESS:K', 'e2' => nil }
-      #     result = engine.evaluate(board_state, {}, 'CHESS')
-      #     puts "King can move from e1 to e2" if result
+      #     transitions = engine.where(board_state, 'CHESS')
+      #     puts "King can move from e1 to e2" if transitions.any?
       #   rescue Sashite::Ggn::ValidationError => e
       #     puts "Failed to process move: #{e.message}"
       #   end
@@ -181,16 +182,16 @@ module Sashite
       #
       # @example Creating from existing Hash data
       #   ggn_data = {
-      #     "SHOGI:K" => {
-      #       "5i" => {
-      #         "4i" => [{ "require" => { "4i" => "empty" }, "perform" => { "5i" => nil, "4i" => "SHOGI:K" } }],
-      #         "6i" => [{ "require" => { "6i" => "empty" }, "perform" => { "5i" => nil, "6i" => "SHOGI:K" } }]
+      #     "CHESS:K" => {
+      #       "e1" => {
+      #         "e2" => [{ "require" => { "e2" => "empty" }, "perform" => { "e1" => nil, "e2" => "CHESS:K" } }],
+      #         "f1" => [{ "require" => { "f1" => "empty" }, "perform" => { "e1" => nil, "f1" => "CHESS:K" } }]
       #       }
       #     }
       #   }
       #
       #   piece_data = Sashite::Ggn.load_hash(ggn_data)
-      #   shogi_king = piece_data.select('SHOGI:K')
+      #   chess_king = piece_data.select('CHESS:K')
       def load_hash(data, validate: true)
         unless data.is_a?(Hash)
           raise ValidationError, "Expected Hash, got #{data.class}"

@@ -6,6 +6,10 @@
 # specification, which is a rule-agnostic, JSON-based format for describing pseudo-legal
 # moves in abstract strategy board games.
 #
+# GGN focuses exclusively on board-to-board transformations: pieces moving, capturing,
+# or transforming on the game board. Hand management, drops, and captures-to-hand are
+# outside the scope of this specification.
+#
 # GGN works alongside other Sashité specifications:
 # - GAN (General Actor Notation): Unique piece identifiers
 # - FEEN (Forsyth-Edwards Enhanced Notation): Board position representation
@@ -30,59 +34,56 @@
 #     "e4" => nil         # Empty square
 #   }
 #
-#   result = engine.evaluate(board_state, {}, "CHESS")
+#   transitions = engine.where(board_state, "CHESS")
 #
-#   if result
+#   if transitions.any?
+#     transition = transitions.first
 #     puts "Move is valid!"
-#     puts "Board changes: #{result.diff}"
+#     puts "Board changes: #{transition.diff}"
 #     # => { "e2" => nil, "e4" => "CHESS:P" }
-#     puts "Piece gained: #{result.gain}" # => nil (no capture)
-#     puts "Piece dropped: #{result.drop}" # => nil (not a drop move)
 #   else
 #     puts "Move is not valid under current conditions"
 #   end
 #
-# @example Piece drops in Shogi
-#   # Shogi allows captured pieces to be dropped back onto the board
-#   piece_data = Sashite::Ggn.load_file("shogi_moves.json")
-#   engine = piece_data.select("SHOGI:P").from("*").to("5e")
-#
-#   # Player has captured pawns available
-#   captures = { "SHOGI:P" => 2 }
-#
-#   # Current board state (5th file is clear of unpromoted pawns)
-#   board_state = {
-#     "5e" => nil,     # Target square is empty
-#     "5a" => nil, "5b" => nil, "5c" => nil, "5d" => nil,
-#     "5f" => nil, "5g" => nil, "5h" => nil, "5i" => nil
-#   }
-#
-#   result = engine.evaluate(board_state, captures, "SHOGI")
-#
-#   if result
-#     puts "Pawn drop is valid!"
-#     puts "Board changes: #{result.diff}"  # => { "5e" => "SHOGI:P" }
-#     puts "Piece dropped from hand: #{result.drop}"  # => "SHOGI:P"
-#   end
-#
-# @example Captures with piece promotion
-#   # A chess pawn capturing and promoting to queen
+# @example Piece promotion with multiple variants
+#   # Chess pawn promotion offers multiple choices
 #   piece_data = Sashite::Ggn.load_file("chess_moves.json")
-#   engine = piece_data.select("CHESS:P").from("g7").to("h8")
+#   engine = piece_data.select("CHESS:P").from("e7").to("e8")
 #
-#   # Board with enemy piece on h8
+#   # Board with pawn ready to promote
 #   board_state = {
-#     "g7" => "CHESS:P",  # Our pawn ready to promote
-#     "h8" => "chess:r"   # Enemy rook (lowercase = opponent)
+#     "e7" => "CHESS:P",  # White pawn on 7th rank
+#     "e8" => nil         # Empty promotion square
 #   }
 #
-#   result = engine.evaluate(board_state, {}, "CHESS")
+#   transitions = engine.where(board_state, "CHESS")
 #
-#   if result
-#     puts "Pawn promotes and captures!"
-#     puts "Final position: #{result.diff}"
-#     # => { "g7" => nil, "h8" => "CHESS:Q" }
-#     puts "Captured piece: #{result.gain}"  # => nil (no capture _in hand_)
+#   transitions.each_with_index do |transition, i|
+#     promoted_piece = transition.diff["e8"]
+#     puts "Promotion choice #{i + 1}: #{promoted_piece}"
+#   end
+#   # Output: CHESS:Q, CHESS:R, CHESS:B, CHESS:N
+#
+# @example Complex multi-square moves like castling
+#   # Castling involves both king and rook movement
+#   piece_data = Sashite::Ggn.load_file("chess_moves.json")
+#   engine = piece_data.select("CHESS:K").from("e1").to("g1")
+#
+#   # Board state allowing kingside castling
+#   board_state = {
+#     "e1" => "CHESS:K",  # King on starting square
+#     "f1" => nil,        # Empty square
+#     "g1" => nil,        # Empty destination
+#     "h1" => "CHESS:R"   # Rook on starting square
+#   }
+#
+#   transitions = engine.where(board_state, "CHESS")
+#
+#   if transitions.any?
+#     transition = transitions.first
+#     puts "Castling is possible!"
+#     puts "Final position: #{transition.diff}"
+#     # => { "e1" => nil, "f1" => "CHESS:R", "g1" => "CHESS:K", "h1" => nil }
 #   end
 #
 # @example Loading GGN data from different sources
@@ -96,6 +97,19 @@
 #   # From Hash
 #   ggn_hash = { "CHESS:K" => { "e1" => { "e2" => [{ "perform" => { "e1" => nil, "e2" => "CHESS:K" } }] } } }
 #   piece_data = Sashite::Ggn.load_hash(ggn_hash)
+#
+# @example Generating all possible moves
+#   # Get all pseudo-legal moves for the current position
+#   board_state = {
+#     "e1" => "CHESS:K", "d1" => "CHESS:Q", "a1" => "CHESS:R",
+#     "e2" => "CHESS:P", "d2" => "CHESS:P"
+#   }
+#
+#   all_moves = piece_data.pseudo_legal_transitions(board_state, "CHESS")
+#
+#   all_moves.each do |actor, origin, target, transitions|
+#     puts "#{actor}: #{origin} → #{target} (#{transitions.size} variants)"
+#   end
 module Sashite
   # Base namespace for all Sashité notation libraries.
   #

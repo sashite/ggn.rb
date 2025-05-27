@@ -6,12 +6,12 @@ require 'json'
 
 puts "=== MINIMAL GGN TEST SUITE ==="
 
-# Test data
+# Test data - Updated for board-only transformations
 VALID_DATA = {
   "CHESS:P" => {
     "e2" => {
       "e4" => [{ "require" => { "e3" => "empty", "e4" => "empty" }, "perform" => { "e2" => nil, "e4" => "CHESS:P" } }],
-      "f3" => [{ "require" => { "f3" => "enemy" }, "perform" => { "e2" => nil, "f3" => "CHESS:P" }, "gain" => "CHESS:P" }]
+      "f3" => [{ "require" => { "f3" => "enemy" }, "perform" => { "e2" => nil, "f3" => "CHESS:P" } }]
     },
     "e7" => {
       "e8" => [
@@ -20,9 +20,12 @@ VALID_DATA = {
       ]
     }
   },
-  "SHOGI:P" => {
-    "*" => {
-      "5e" => [{ "require" => { "5e" => "empty" }, "perform" => { "5e" => "SHOGI:P" }, "drop" => "SHOGI:P" }]
+  "CHESS:K" => {
+    "e1" => {
+      "g1" => [{
+        "require" => { "f1" => "empty", "g1" => "empty", "h1" => "CHESS:R" },
+        "perform" => { "e1" => nil, "f1" => "CHESS:R", "g1" => "CHESS:K", "h1" => nil }
+      }]
     }
   }
 }.freeze
@@ -97,54 +100,67 @@ puts "Testing move evaluation..."
 
 # Valid move
 board = { "e2" => "CHESS:P", "e3" => nil, "e4" => nil }
-results = engine.where(board, {}, "CHESS")
+results = engine.where(board, "CHESS")
 raise unless results.size == 1
 transition = results.first
 raise unless transition.diff == { "e2" => nil, "e4" => "CHESS:P" }
-raise if transition.gain?
 
 # Blocked move
 blocked_board = { "e2" => "CHESS:P", "e3" => "CHESS:N", "e4" => nil }
-results = engine.where(blocked_board, {}, "CHESS")
+results = engine.where(blocked_board, "CHESS")
 raise unless results.empty?
 
 # Capture
 capture_engine = destination.to("f3")
 capture_board = { "e2" => "CHESS:P", "f3" => "chess:p" }
-results = capture_engine.where(capture_board, {}, "CHESS")
+results = capture_engine.where(capture_board, "CHESS")
 raise unless results.size == 1
-raise unless results.first.gain == "CHESS:P"
 
 # Multiple promotion choices
 promotion_engine = source.from("e7").to("e8")
 promotion_board = { "e7" => "CHESS:P", "e8" => nil }
-results = promotion_engine.where(promotion_board, {}, "CHESS")
+results = promotion_engine.where(promotion_board, "CHESS")
 raise unless results.size == 2  # Q and R variants in test data
 
 puts "✓ Move evaluation works"
 
-puts "Testing Shogi drops..."
+puts "Testing complex moves..."
 
-# Valid drop
-shogi_source = ruleset.select("SHOGI:P")
-drop_engine = shogi_source.from("*").to("5e")
-drop_board = { "5e" => nil }
-captures = { "SHOGI:P" => 1 }
-results = drop_engine.where(drop_board, captures, "SHOGI")
+# Castling (multi-square move)
+king_source = ruleset.select("CHESS:K")
+castling_engine = king_source.from("e1").to("g1")
+castling_board = { "e1" => "CHESS:K", "f1" => nil, "g1" => nil, "h1" => "CHESS:R" }
+results = castling_engine.where(castling_board, "CHESS")
 raise unless results.size == 1
-raise unless results.first.drop == "SHOGI:P"
+transition = results.first
+expected_diff = { "e1" => nil, "f1" => "CHESS:R", "g1" => "CHESS:K", "h1" => nil }
+raise unless transition.diff == expected_diff
 
-# No piece in hand
-results = drop_engine.where(drop_board, {}, "SHOGI")
+puts "✓ Complex moves work"
+
+puts "Testing piece ownership logic..."
+
+# Test case correspondence (not exact string matching)
+mixed_board = { "e2" => "MAKRUK:P", "f3" => "chess:p" }  # Different games, same player casing
+makruk_data = { "MAKRUK:P" => { "e2" => { "e4" => [{ "perform" => { "e2" => nil, "e4" => "MAKRUK:P" } }] } } }
+makruk_ruleset = Sashite::Ggn::Ruleset.new(makruk_data)
+makruk_engine = makruk_ruleset.select("MAKRUK:P").from("e2").to("e4")
+
+# MAKRUK piece should be controllable by CHESS player (both uppercase)
+results = makruk_engine.where(mixed_board, "CHESS")
+raise unless results.size == 1
+
+# But not by lowercase player
+results = makruk_engine.where(mixed_board, "chess")
 raise unless results.empty?
 
-puts "✓ Shogi drops work"
+puts "✓ Piece ownership logic works"
 
 puts "Testing pseudo_legal_transitions..."
 
 # Basic functionality
 board = { "e2" => "CHESS:P", "e3" => nil, "e4" => nil, "f3" => nil }
-moves = ruleset.pseudo_legal_transitions(board, {}, "CHESS")
+moves = ruleset.pseudo_legal_transitions(board, "CHESS")
 raise unless moves.is_a?(Array)
 raise if moves.empty?
 
@@ -156,7 +172,7 @@ raise unless target.is_a?(String)
 raise unless transitions.is_a?(Array)
 
 # No moves for wrong player
-moves = ruleset.pseudo_legal_transitions(board, {}, "shogi")
+moves = ruleset.pseudo_legal_transitions(board, "shogi")
 raise unless moves.empty?
 
 puts "✓ pseudo_legal_transitions works"
@@ -165,14 +181,14 @@ puts "Testing error handling..."
 
 # Invalid parameters
 begin
-  ruleset.pseudo_legal_transitions("not hash", {}, "CHESS")
+  ruleset.pseudo_legal_transitions("not hash", "CHESS")
   raise "Should have failed"
 rescue ArgumentError
   # Expected
 end
 
 begin
-  engine.where({}, {}, "")
+  engine.where({}, "")
   raise "Should have failed"
 rescue ArgumentError
   # Expected
@@ -197,24 +213,45 @@ puts "✓ Error handling works"
 
 puts "Testing Transition class..."
 
+# Simple transition
 transition = Sashite::Ggn::Ruleset::Source::Destination::Engine::Transition.new(
-  "CHESS:R", "CHESS:P", "e2" => nil, "e4" => "CHESS:Q"
+  "e2" => nil, "e4" => "CHESS:P"
 )
 
-raise unless transition.gain == "CHESS:R"
-raise unless transition.drop == "CHESS:P"
-raise unless transition.diff == { "e2" => nil, "e4" => "CHESS:Q" }
-raise unless transition.gain?
-raise unless transition.drop?
+raise unless transition.diff == { "e2" => nil, "e4" => "CHESS:P" }
 
-simple_transition = Sashite::Ggn::Ruleset::Source::Destination::Engine::Transition.new(
-  nil, nil, "e2" => nil, "e3" => "CHESS:P"
+# Complex transition (castling)
+complex_transition = Sashite::Ggn::Ruleset::Source::Destination::Engine::Transition.new(
+  "e1" => nil, "f1" => "CHESS:R", "g1" => "CHESS:K", "h1" => nil
 )
-raise if simple_transition.gain?
-raise if simple_transition.drop?
+expected_diff = { "e1" => nil, "f1" => "CHESS:R", "g1" => "CHESS:K", "h1" => nil }
+raise unless complex_transition.diff == expected_diff
 
 puts "✓ Transition class works"
 
+puts "Testing active_game parameter..."
+
+# Test with different game identifiers
+board = { "e2" => "CHESS:P", "e4" => nil }
+
+# Should work with CHESS (uppercase)
+results = engine.where(board, "CHESS")
+raise unless results.size == 1
+
+# Should not work with chess (lowercase) - wrong player
+results = engine.where(board, "chess")
+raise unless results.empty?
+
+# Test with mixed case (should fail validation)
+begin
+  engine.where(board, "Chess")
+  raise "Should have failed"
+rescue ArgumentError
+  # Expected - mixed case is invalid
+end
+
+puts "✓ active_game parameter works"
+
 puts "\n✅ ALL TESTS PASSED!"
-puts "Tested: Module methods, Core classes, Move evaluation, Drops, Error handling"
-puts "Coverage: Load/validate, Select/navigate, Engine evaluation, Transitions"
+puts "Tested: Module methods, Core classes, Move evaluation, Complex moves, Piece ownership"
+puts "Coverage: Load/validate, Select/navigate, Engine evaluation, Transitions, active_game"

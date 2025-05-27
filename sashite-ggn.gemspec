@@ -5,8 +5,8 @@ Gem::Specification.new do |spec|
   spec.version                = ::File.read("VERSION.semver").chomp
   spec.author                 = "Cyril Kato"
   spec.email                  = "contact@cyril.email"
-  spec.summary                = "General Gameplay Notation (GGN) parser and validator for Ruby"
-  spec.description            = "A Ruby implementation of the General Gameplay Notation (GGN) specification. GGN is a rule-agnostic, JSON-based format for describing pseudo-legal moves in abstract strategy board games. This library provides parsing, validation, and evaluation capabilities for GGN documents, enabling game engines to work with movement rules across different board games including Chess, Shogi, Xiangqi, and custom variants."
+  spec.summary                = "General Gameplay Notation (GGN) library for board-to-board game transformations"
+  spec.description            = "A Ruby implementation of the General Gameplay Notation (GGN) specification. GGN is a rule-agnostic, JSON-based format for describing pseudo-legal board-to-board transformations in abstract strategy board games. This library provides parsing, validation, and evaluation capabilities for GGN documents, focusing exclusively on piece movements, captures, and transformations on the game board. Supports Chess, Shogi, Xiangqi, and custom variants without hand management or piece drops."
   spec.homepage               = "https://github.com/sashite/ggn.rb"
   spec.license                = "MIT"
   spec.files                  = ::Dir["LICENSE.md", "README.md", "lib/**/*"]

@@ -18,6 +18,9 @@ module Sashite
     # efficient, readable, and maintainable code that avoids mutation and
     # side effects.
     #
+    # GGN focuses exclusively on board-to-board transformations. All moves
+    # represent pieces moving, capturing, or transforming on the game board.
+    #
     # @example Basic usage
     #   piece_data = Sashite::Ggn.load_file('chess.json')
     #   chess_king = piece_data.select('CHESS:K')
@@ -36,8 +39,7 @@ module Sashite
     #
     # @example Finding all possible moves in a position
     #   board_state = { 'e1' => 'CHESS:K', 'e2' => 'CHESS:P', 'd1' => 'CHESS:Q' }
-    #   captures = { 'CHESS:P' => 2 }
-    #   all_moves = piece_data.pseudo_legal_transitions(board_state, captures, 'CHESS')
+    #   all_moves = piece_data.pseudo_legal_transitions(board_state, 'CHESS')
     #   puts "Found #{all_moves.size} possible moves"
     #
     # @see https://sashite.dev/documents/gan/ GAN Specification
@@ -107,13 +109,13 @@ module Sashite
       #
       # @param board_state [Hash] Current board state mapping square labels
       #   to piece identifiers (nil for empty squares)
-      # @param captures [Hash] Available pieces in hand for drops
-      # @param turn [String] Current player's game identifier (e.g., 'CHESS', 'shogi')
+      # @param active_game [String] Current player's game identifier (e.g., 'CHESS', 'shogi').
+      #   This corresponds to the first element of the GAMES-TURN field in FEEN notation.
       #
       # @return [Array<Array>] List of move transitions, where each element is:
       #   [actor, origin, target, transitions]
       #   - actor [String]: GAN identifier of the moving piece
-      #   - origin [String]: Source square or "*" for drops
+      #   - origin [String]: Source square
       #   - target [String]: Destination square
       #   - transitions [Array<Transition>]: All valid transition variants
       #
@@ -121,7 +123,7 @@ module Sashite
       #
       # @example Getting all possible transitions including promotion variants
       #   board_state = { 'e7' => 'CHESS:P', 'e8' => nil }
-      #   transitions = piece_data.pseudo_legal_transitions(board_state, {}, 'CHESS')
+      #   transitions = piece_data.pseudo_legal_transitions(board_state, 'CHESS')
       #   # => [
       #   #   ["CHESS:P", "e7", "e8", [
       #   #     #<Transition diff={"e7"=>nil, "e8"=>"CHESS:Q"}>,
@@ -132,41 +134,41 @@ module Sashite
       #   # ]
       #
       # @example Processing grouped transitions
-      #   transitions = piece_data.pseudo_legal_transitions(board_state, captures, 'CHESS')
+      #   transitions = piece_data.pseudo_legal_transitions(board_state, 'CHESS')
       #   transitions.each do |actor, origin, target, variants|
       #     puts "#{actor} from #{origin} to #{target}:"
       #     variants.each_with_index do |transition, i|
       #       puts "  Variant #{i + 1}: #{transition.diff}"
-      #       puts "    Gain: #{transition.gain}" if transition.gain?
-      #       puts "    Drop: #{transition.drop}" if transition.drop?
       #     end
       #   end
       #
       # @example Filtering for specific move types
-      #   # Find all capture moves
-      #   captures_only = piece_data.pseudo_legal_transitions(board_state, captures, turn)
-      #     .select { |actor, origin, target, variants| variants.any?(&:gain?) }
+      #   # Find all promotion moves
+      #   promotions = piece_data.pseudo_legal_transitions(board_state, 'CHESS')
+      #     .select { |actor, origin, target, variants| variants.size > 1 }
       #
-      #   # Find all drop moves
-      #   drops_only = piece_data.pseudo_legal_transitions(board_state, captures, turn)
-      #     .select { |actor, origin, target, variants| origin == "*" }
+      #   # Find all multi-square moves (like castling)
+      #   complex_moves = piece_data.pseudo_legal_transitions(board_state, 'CHESS')
+      #     .select { |actor, origin, target, variants|
+      #       variants.any? { |t| t.diff.keys.size > 2 }
+      #     }
       #
       # @example Performance considerations
       #   # For large datasets, consider filtering by piece type first
       #   specific_piece_moves = piece_data.select('CHESS:Q')
-      #     .from('d1').to('d8').where(board_state, captures, turn)
-      def pseudo_legal_transitions(board_state, captures, turn)
-        validate_pseudo_legal_parameters!(board_state, captures, turn)
+      #     .from('d1').to('d8').where(board_state, 'CHESS')
+      def pseudo_legal_transitions(board_state, active_game)
+        validate_pseudo_legal_parameters!(board_state, active_game)
 
         # Use flat_map to process all actors and flatten the results in one pass
         # This functional approach avoids mutation and intermediate arrays
         @data.flat_map do |actor, source_data|
           # Early filter: only process pieces belonging to current player
           # This optimization significantly reduces processing time
-          next [] unless piece_belongs_to_current_player?(actor, turn)
+          next [] unless piece_belongs_to_current_player?(actor, active_game)
 
           # Process all source positions for this actor using functional decomposition
-          process_actor_transitions(actor, source_data, board_state, captures, turn)
+          process_actor_transitions(actor, source_data, board_state, active_game)
         end
       end
 
@@ -182,25 +184,22 @@ module Sashite
       # @param source_data [Hash] Movement data for this piece type, mapping
       #   origin squares to destination data
       # @param board_state [Hash] Current board state
-      # @param captures [Hash] Available pieces in hand
-      # @param turn [String] Current player identifier
+      # @param active_game [String] Current player identifier
       #
       # @return [Array] Array of valid transition tuples for this actor
       #
       # @example Source data structure
       #   {
-      #     "e1" => { "e2" => [...], "f1" => [...] },  # Regular moves
-      #     "*"  => { "e4" => [...], "f5" => [...] }   # Drop moves
+      #     "e1" => { "e2" => [...], "f1" => [...] }  # Regular moves
       #   }
-      def process_actor_transitions(actor, source_data, board_state, captures, turn)
+      def process_actor_transitions(actor, source_data, board_state, active_game)
         source_data.flat_map do |origin, destination_data|
-          # Early filter: check movement context (piece availability/position)
-          # For drops: piece must be available in hand
-          # For moves: piece must be present at origin square
-          next [] unless valid_movement_context?(actor, origin, board_state, captures)
+          # Early filter: check piece presence at origin square
+          # Piece must be present at origin square for the move to be valid
+          next [] unless piece_on_board_at_origin?(actor, origin, board_state)
 
           # Process all destination squares for this origin
-          process_origin_transitions(actor, origin, destination_data, board_state, captures, turn)
+          process_origin_transitions(actor, origin, destination_data, board_state, active_game)
         end
       end
 
@@ -212,11 +211,10 @@ module Sashite
       # combine filtering and transformation operations.
       #
       # @param actor [String] GAN identifier of the piece
-      # @param origin [String] Source square or "*" for drops
+      # @param origin [String] Source square
       # @param destination_data [Hash] Available destinations and their transition rules
       # @param board_state [Hash] Current board state
-      # @param captures [Hash] Available pieces in hand
-      # @param turn [String] Current player identifier
+      # @param active_game [String] Current player identifier
       #
       # @return [Array] Array of valid transition tuples for this origin
       #
@@ -229,7 +227,7 @@ module Sashite
       #       { "require" => { "f3" => "enemy" }, "perform" => { "e2" => nil, "f3" => "CHESS:P" } }
       #     ]
       #   }
-      def process_origin_transitions(actor, origin, destination_data, board_state, captures, turn)
+      def process_origin_transitions(actor, origin, destination_data, board_state, active_game)
         destination_data.filter_map do |target, transition_rules|
           # Create engine to evaluate this specific source-destination pair
           # Each engine encapsulates the conditional logic for one move
@@ -237,43 +235,11 @@ module Sashite
 
           # Get all valid transitions for this move (supports multiple variants)
           # The engine handles require/prevent conditions and returns Transition objects
-          transitions = engine.where(board_state, captures, turn)
+          transitions = engine.where(board_state, active_game)
 
           # Only return successful moves (with at least one valid transition)
           # filter_map automatically filters out nil values
           [actor, origin, target, transitions] unless transitions.empty?
-        end
-      end
-
-      # Validates movement context based on origin type.
-      #
-      # This method centralizes the logic for checking piece availability and position,
-      # providing a clean abstraction over the different requirements for drops vs moves.
-      # Uses the shared MoveValidator module for consistency across the codebase.
-      #
-      # @param actor [String] GAN identifier of the piece
-      # @param origin [String] Source square or "*" for drops
-      # @param board_state [Hash] Current board state
-      # @param captures [Hash] Available pieces in hand
-      #
-      # @return [Boolean] true if the movement context is valid
-      #
-      # @example Drop move validation
-      #   valid_movement_context?("SHOGI:P", "*", board_state, {"SHOGI:P" => 1})
-      #   # => true (pawn available in hand)
-      #
-      # @example Regular move validation
-      #   valid_movement_context?("CHESS:K", "e1", {"e1" => "CHESS:K"}, {})
-      #   # => true (king present at e1)
-      def valid_movement_context?(actor, origin, board_state, captures)
-        if origin == DROP_ORIGIN
-          # For drops: piece must be available in hand
-          # Uses base form of piece identifier (without modifiers)
-          piece_available_in_hand?(actor, captures)
-        else
-          # For regular moves: piece must be on board at origin
-          # Ensures the exact piece is at the expected position
-          piece_on_board_at_origin?(actor, origin, board_state)
         end
       end
 
@@ -284,47 +250,41 @@ module Sashite
       # early in the processing pipeline.
       #
       # @param board_state [Object] Should be a Hash mapping squares to pieces
-      # @param captures [Object] Should be a Hash mapping piece types to counts
-      # @param turn [Object] Should be a String representing current player
+      # @param active_game [Object] Should be a String representing current player's game
       #
       # @raise [ArgumentError] If any parameter is invalid
       #
       # @example Valid parameters
       #   validate_pseudo_legal_parameters!(
       #     { "e1" => "CHESS:K", "e2" => nil },
-      #     { "CHESS:P" => 2 },
       #     "CHESS"
       #   )
       #
       # @example Invalid parameters (raises ArgumentError)
-      #   validate_pseudo_legal_parameters!("invalid", {}, "CHESS")
-      #   validate_pseudo_legal_parameters!({}, "invalid", "CHESS")
-      #   validate_pseudo_legal_parameters!({}, {}, 123)
-      #   validate_pseudo_legal_parameters!({}, {}, "")
-      def validate_pseudo_legal_parameters!(board_state, captures, turn)
+      #   validate_pseudo_legal_parameters!("invalid", "CHESS")
+      #   validate_pseudo_legal_parameters!({}, 123)
+      #   validate_pseudo_legal_parameters!({}, "")
+      def validate_pseudo_legal_parameters!(board_state, active_game)
         # Type validation with clear, specific error messages
         unless board_state.is_a?(::Hash)
           raise ::ArgumentError, "board_state must be a Hash, got #{board_state.class}"
         end
 
-        unless captures.is_a?(::Hash)
-          raise ::ArgumentError, "captures must be a Hash, got #{captures.class}"
-        end
-
-        unless turn.is_a?(::String)
-          raise ::ArgumentError, "turn must be a String, got #{turn.class}"
+        unless active_game.is_a?(::String)
+          raise ::ArgumentError, "active_game must be a String, got #{active_game.class}"
         end
 
         # Content validation - ensures meaningful data
-        if turn.empty?
-          raise ::ArgumentError, "turn cannot be empty"
+        if active_game.empty?
+          raise ::ArgumentError, "active_game cannot be empty"
+        end
+
+        unless valid_game_identifier?(active_game)
+          raise ::ArgumentError, "Invalid active_game format: #{active_game.inspect}. Must be a valid game identifier (alphabetic characters only, e.g., 'CHESS', 'shogi')."
         end
 
         # Validate board_state structure (optional deep validation)
         validate_board_state_structure!(board_state) if ENV['GGN_STRICT_VALIDATION']
-
-        # Validate captures structure (optional deep validation)
-        validate_captures_structure!(captures) if ENV['GGN_STRICT_VALIDATION']
       end
 
       # Validates board_state structure in strict mode.
@@ -343,26 +303,6 @@ module Sashite
 
           if piece && (!piece.is_a?(::String) || piece.empty?)
             raise ::ArgumentError, "Invalid piece at #{square}: #{piece.inspect}"
-          end
-        end
-      end
-
-      # Validates captures structure in strict mode.
-      #
-      # This optional validation ensures that capture data follows
-      # the expected format with proper piece identifiers and counts.
-      #
-      # @param captures [Hash] Captures to validate
-      #
-      # @raise [ArgumentError] If captures contains invalid data
-      def validate_captures_structure!(captures)
-        captures.each do |piece, count|
-          unless piece.is_a?(::String) && !piece.empty?
-            raise ::ArgumentError, "Invalid piece in captures: #{piece.inspect}"
-          end
-
-          unless count.is_a?(::Integer) && count >= 0
-            raise ::ArgumentError, "Invalid count for #{piece}: #{count.inspect}"
           end
         end
       end

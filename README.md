@@ -9,12 +9,14 @@ A Ruby implementation of the General Gameplay Notation (GGN) specification for d
 
 GGN (General Gameplay Notation) is a rule-agnostic, JSON-based format for representing pseudo-legal moves in abstract strategy board games. This gem implements the [GGN Specification v1.0.0](https://sashite.dev/documents/ggn/1.0.0/).
 
-GGN focuses on basic movement constraints rather than game-specific legality rules, making it suitable for:
+GGN focuses exclusively on **board-to-board transformations**: pieces moving, capturing, or transforming on the game board. It describes basic movement constraints rather than game-specific legality rules, making it suitable for:
 
 - Cross-game move analysis and engine development
 - Hybrid games combining elements from different chess variants
 - Database systems requiring piece disambiguation across game types
 - Performance-critical applications with pre-computed move libraries
+
+**Note**: GGN does not support hand management, piece drops, or captures-to-hand. These mechanics should be handled at a higher level by game engines.
 
 ## Installation
 
@@ -47,7 +49,7 @@ engine = ruleset.select("CHESS:P").from("e2").to("e4")
 board_state = { "e2" => "CHESS:P", "e3" => nil, "e4" => nil }
 
 # Evaluate move
-transitions = engine.where(board_state, {}, "CHESS")
+transitions = engine.where(board_state, "CHESS")
 # => [#<Transition diff={"e2"=>nil, "e4"=>"CHESS:P"}>]
 ```
 
@@ -55,7 +57,7 @@ transitions = engine.where(board_state, {}, "CHESS")
 
 ```ruby
 # Get all pseudo-legal moves for current position
-all_moves = ruleset.pseudo_legal_transitions(board_state, captures, "CHESS")
+all_moves = ruleset.pseudo_legal_transitions(board_state, "CHESS")
 
 # Each move is represented as [actor, origin, target, transitions]
 all_moves.each do |actor, origin, target, transitions|
@@ -70,7 +72,7 @@ GGN supports multiple outcomes for a single move (e.g., promotion choices):
 ```ruby
 # Chess pawn promotion
 engine = ruleset.select("CHESS:P").from("e7").to("e8")
-transitions = engine.where({"e7" => "CHESS:P", "e8" => nil}, {}, "CHESS")
+transitions = engine.where({"e7" => "CHESS:P", "e8" => nil}, "CHESS")
 
 transitions.each do |transition|
   promoted_piece = transition.diff["e8"]
@@ -79,19 +81,34 @@ end
 # Output: CHESS:Q, CHESS:R, CHESS:B, CHESS:N
 ```
 
-## Piece Drops
+## Complex Moves
 
-For games supporting piece drops (e.g., Shogi):
+GGN can represent multi-square moves like castling:
 
 ```ruby
-# Drop from hand (origin "*")
-engine = ruleset.select("SHOGI:P").from("*").to("5e")
+# Castling (king and rook move simultaneously)
+engine = ruleset.select("CHESS:K").from("e1").to("g1")
+board_state = {
+  "e1" => "CHESS:K", "f1" => nil, "g1" => nil, "h1" => "CHESS:R"
+}
 
-captures = { "SHOGI:P" => 1 }  # One pawn in hand
-board_state = { "5e" => nil }   # Empty target square
+transitions = engine.where(board_state, "CHESS")
+# => [#<Transition diff={"e1"=>nil, "f1"=>"CHESS:R", "g1"=>"CHESS:K", "h1"=>nil}>]
+```
 
-transitions = engine.where(board_state, captures, "SHOGI")
-# => [#<Transition diff={"5e"=>"SHOGI:P"} drop="SHOGI:P">]
+## Conditional Moves
+
+GGN supports moves with complex requirements and prevent conditions:
+
+```ruby
+# En passant capture (removes pawn from different square)
+engine = ruleset.select("CHESS:P").from("d5").to("e6")
+board_state = {
+  "d5" => "CHESS:P", "e5" => "chess:p", "e6" => nil
+}
+
+transitions = engine.where(board_state, "CHESS")
+# => [#<Transition diff={"d5"=>nil, "e5"=>nil, "e6"=>"CHESS:P"}>]
 ```
 
 ## Validation
@@ -114,9 +131,9 @@ Sashite::Ggn.valid?(data)     # Returns boolean
 
 ### Key Methods
 
-- `#pseudo_legal_transitions(board_state, captures, turn)` - Generate all moves
+- `#pseudo_legal_transitions(board_state, active_game)` - Generate all moves
 - `#select(actor).from(origin).to(target)` - Query specific move
-- `#where(board_state, captures, turn)` - Evaluate move validity
+- `#where(board_state, active_game)` - Evaluate move validity
 
 ## Related Specifications
 
