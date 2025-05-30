@@ -5,7 +5,7 @@
 [![Yard documentation](https://img.shields.io/badge/Yard-documentation-blue.svg?logo=github)](https://rubydoc.info/github/sashite/ggn.rb/main)
 [![License](https://img.shields.io/github/license/sashite/ggn.rb?label=License&logo=github)](https://github.com/sashite/ggn.rb/raw/main/LICENSE.md)
 
-> A Ruby library for **GGN** (General Gameplay Notation) - a rule-agnostic format for describing pseudo-legal moves in abstract strategy board games.
+> A Ruby library for [GGN (General Gameplay Notation)](https://sashite.dev/documents/ggn/1.0.0/) - a rule-agnostic format for describing pseudo-legal moves in abstract strategy board games.
 
 ## What is GGN?
 
