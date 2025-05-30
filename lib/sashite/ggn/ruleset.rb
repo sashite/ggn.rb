@@ -21,6 +21,14 @@ module Sashite
     # GGN focuses exclusively on board-to-board transformations. All moves
     # represent pieces moving, capturing, or transforming on the game board.
     #
+    # = Validation Behavior
+    #
+    # When `validate: true` (default), performs:
+    # - Logical contradiction detection in require/prevent conditions
+    # - Implicit requirement duplication detection
+    #
+    # When `validate: false`, skips all internal validations for maximum performance.
+    #
     # @example Basic usage
     #   piece_data = Sashite::Ggn.load_file('chess.json')
     #   chess_king = piece_data.select('CHESS:K')
@@ -51,20 +59,30 @@ module Sashite
       #
       # @param data [Hash] The parsed GGN JSON data structure, where keys are
       #   GAN identifiers and values contain the movement definitions.
+      # @param validate [Boolean] Whether to perform internal validations (default: true).
+      #   When false, skips logical contradiction and implicit requirement checks
+      #   for maximum performance.
       #
       # @raise [ArgumentError] If data is not a Hash
+      # @raise [ValidationError] If validation is enabled and logical issues are found
       #
-      # @example Creating from parsed JSON data
+      # @example Creating from parsed JSON data with full validation
       #   ggn_data = JSON.parse(File.read('chess.json'))
-      #   ruleset = Ruleset.new(ggn_data)
-      def initialize(data)
+      #   ruleset = Ruleset.new(ggn_data)  # validate: true by default
+      #
+      # @example Creating without validation for performance
+      #   ggn_data = JSON.parse(File.read('large_dataset.json'))
+      #   ruleset = Ruleset.new(ggn_data, validate: false)
+      def initialize(data, validate: true)
         raise ::ArgumentError, "Expected Hash, got #{data.class}" unless data.is_a?(::Hash)
 
         @data = data
 
-        # Perform enhanced validations for logical consistency
-        validate_no_implicit_requirement_duplications!
-        validate_no_logical_contradictions!
+        if validate
+          # Perform enhanced validations for logical consistency
+          validate_no_implicit_requirement_duplications!
+          validate_no_logical_contradictions!
+        end
 
         freeze
       end
@@ -96,7 +114,7 @@ module Sashite
       #   GAME:piece (e.g., CHESS:K, shogi:p, XIANGQI:E)
       def select(actor)
         data = @data.fetch(actor)
-        Source.new(data, actor:)
+        Source.new(data, actor: actor)
       end
 
       # Returns all pseudo-legal move transitions for the given position.
@@ -287,26 +305,35 @@ module Sashite
           raise ::ArgumentError, "Invalid active_game format: #{active_game.inspect}. Must be a valid game identifier (alphabetic characters only, e.g., 'CHESS', 'shogi')."
         end
 
-        # Validate board_state structure (optional deep validation)
-        validate_board_state_structure!(board_state) if ENV['GGN_STRICT_VALIDATION']
+        # Validate board_state structure
+        validate_board_state_structure!(board_state)
       end
 
-      # Validates board_state structure in strict mode.
+      # Validates board_state structure.
       #
-      # This optional validation can be enabled via environment variable
-      # to catch malformed board states during development and testing.
+      # Ensures all square labels are valid strings and all pieces are either nil
+      # or valid strings. This validation helps catch common integration errors
+      # where malformed board states are passed to the GGN engine.
       #
       # @param board_state [Hash] Board state to validate
       #
       # @raise [ArgumentError] If board_state contains invalid data
+      #
+      # @example Valid board state
+      #   { "e1" => "CHESS:K", "e2" => nil, "d1" => "CHESS:Q" }
+      #
+      # @example Invalid board states (would raise ArgumentError)
+      #   { 123 => "CHESS:K" }           # Invalid square label
+      #   { "e1" => "" }                 # Empty piece string
+      #   { "e1" => 456 }                # Non-string piece
       def validate_board_state_structure!(board_state)
         board_state.each do |square, piece|
           unless square.is_a?(::String) && !square.empty?
-            raise ::ArgumentError, "Invalid square label: #{square.inspect}"
+            raise ::ArgumentError, "Invalid square label: #{square.inspect}. Must be a non-empty String."
           end
 
           if piece && (!piece.is_a?(::String) || piece.empty?)
-            raise ::ArgumentError, "Invalid piece at #{square}: #{piece.inspect}"
+            raise ::ArgumentError, "Invalid piece at #{square}: #{piece.inspect}. Must be a String or nil."
           end
         end
       end

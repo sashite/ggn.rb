@@ -19,6 +19,7 @@ GGN is like having a universal "move library" that works across different board 
 - **JSON-based**: Structured, machine-readable format
 - **Performance-optimized**: Pre-computed move libraries for fast evaluation
 - **Cross-game compatible**: Supports hybrid games mixing different variants
+- **Flexible validation**: Choose between safety and performance
 
 ## Installation
 
@@ -41,7 +42,7 @@ gem install sashite-ggn
 ```ruby
 require "sashite-ggn"
 
-# Load GGN data from file
+# Load GGN data from file (with full validation by default)
 ruleset = Sashite::Ggn.load_file("chess_moves.json")
 
 # Query specific piece movement rules
@@ -87,6 +88,41 @@ ruleset = Sashite::Ggn.load_hash(ggn_json)
 puts "Loaded pawn movement rules!"
 ```
 
+## Validation System
+
+Ggn.rb offers **flexible validation** with two modes:
+
+### Full Validation (Default)
+```ruby
+# All validations enabled (recommended for development/safety)
+ruleset = Sashite::Ggn.load_file("moves.json")
+# ✓ JSON Schema validation
+# ✓ Logical contradiction detection
+# ✓ Implicit requirement duplication detection
+```
+
+### Performance Mode
+```ruby
+# All validations disabled (maximum performance)
+ruleset = Sashite::Ggn.load_file("moves.json", validate: false)
+# ✗ No validation (use with pre-validated data)
+```
+
+### Validation Levels
+
+| Validation Type | Purpose | When Enabled |
+|----------------|---------|--------------|
+| **JSON Schema** | Ensures GGN format compliance | `validate: true` in load methods |
+| **Logical Contradictions** | Detects impossible require/prevent conditions | `validate: true` in Ruleset.new |
+| **Implicit Duplications** | Prevents redundant requirements | `validate: true` in Ruleset.new |
+
+```ruby
+# Selective validation for specific use cases
+if Sashite::Ggn.valid?(data)  # Quick schema check only
+  ruleset = Sashite::Ggn::Ruleset.new(data, validate: false)  # Skip internal validations
+end
+```
+
 ## Understanding GGN Format
 
 A GGN document has this structure:
@@ -124,7 +160,7 @@ A GGN document has this structure:
 
 ## Complete API Reference
 
-### Core Methods
+### Core Loading Methods
 
 #### `Sashite::Ggn.load_file(filepath, validate: true)`
 
@@ -132,14 +168,14 @@ Loads and validates a GGN JSON file.
 
 **Parameters:**
 - `filepath` [String] - Path to GGN JSON file
-- `validate` [Boolean] - Whether to validate against schema (default: true)
+- `validate` [Boolean] - Whether to perform all validations (default: true)
 
 **Returns:** Ruleset instance
 
 **Example:**
 
 ```ruby
-# Load with validation (recommended)
+# Load with full validation (recommended)
 ruleset = Sashite::Ggn.load_file("moves.json")
 
 # Load without validation (faster for large files)
@@ -160,6 +196,8 @@ ruleset = Sashite::Ggn.load_string(json)
 #### `Sashite::Ggn.load_hash(data, validate: true)`
 
 Creates a ruleset from existing Hash data.
+
+### Navigation Methods
 
 #### `ruleset.select(piece_identifier)`
 
@@ -387,8 +425,10 @@ end
 ### Safe Loading for User Input
 
 ```ruby
-def load_user_ggn_file(filepath)
-  ruleset = Sashite::Ggn.load_file(filepath)
+def load_user_ggn_file(filepath, environment = :development)
+  validate = (environment == :development)  # Full validation in dev only
+
+  ruleset = Sashite::Ggn.load_file(filepath, validate: validate)
   puts "Successfully loaded #{filepath}"
   ruleset
 rescue Sashite::Ggn::ValidationError => e
@@ -399,7 +439,7 @@ end
 
 ### Logical Validation
 
-The library automatically detects logical inconsistencies:
+The library automatically detects logical inconsistencies when `validate: true`:
 
 ```ruby
 # ❌ This will raise ValidationError - logical contradiction
@@ -479,12 +519,23 @@ moves = ruleset.pseudo_legal_transitions(board, "MIXED")
 ### Performance Optimization
 
 ```ruby
-# For large datasets, disable validation during loading
-large_ruleset = Sashite::Ggn.load_file("comprehensive_moves.json", validate: false)
+# Choose validation level based on your needs
+def load_ggn_optimized(filepath, trusted_source: false)
+  if trusted_source
+    # Maximum performance for pre-validated data
+    Sashite::Ggn.load_file(filepath, validate: false)
+  else
+    # Full validation for safety
+    Sashite::Ggn.load_file(filepath, validate: true)
+  end
+end
 
-# Use strict validation in development
-ENV['GGN_STRICT_VALIDATION'] = 'true'
-ruleset = Sashite::Ggn.load_file("moves.json")  # Extra validation enabled
+# Pre-validate once, then use fast loading
+if Sashite::Ggn.valid?(data)
+  fast_ruleset = Sashite::Ggn.load_hash(data, validate: false)
+else
+  puts "Invalid data detected"
+end
 ```
 
 ### Custom Game Development
@@ -513,8 +564,8 @@ class MoveDatabase
     @rulesets = {}
   end
 
-  def load_game_rules(game_name, filepath)
-    @rulesets[game_name] = Sashite::Ggn.load_file(filepath)
+  def load_game_rules(game_name, filepath, validate: true)
+    @rulesets[game_name] = Sashite::Ggn.load_file(filepath, validate: validate)
   rescue Sashite::Ggn::ValidationError => e
     warn "Failed to load #{game_name}: #{e.message}"
   end
@@ -529,8 +580,8 @@ end
 
 # Usage
 db = MoveDatabase.new
-db.load_game_rules("chess", "rules/chess.json")
-db.load_game_rules("shogi", "rules/shogi.json")
+db.load_game_rules("chess", "rules/chess.json", validate: true)   # Full validation
+db.load_game_rules("shogi", "rules/shogi.json", validate: false)  # Fast loading
 
 moves = db.evaluate_position("chess", board_state, "CHESS")
 ```
@@ -578,8 +629,8 @@ end
 
 ```ruby
 class MoveValidator
-  def initialize(ggn_filepath)
-    @ruleset = Sashite::Ggn.load_file(ggn_filepath)
+  def initialize(ggn_filepath, validate_ggn: true)
+    @ruleset = Sashite::Ggn.load_file(ggn_filepath, validate: validate_ggn)
   end
 
   def validate_move(piece, from, to, board, player)
@@ -601,7 +652,7 @@ class MoveValidator
 end
 
 # Usage
-validator = MoveValidator.new("chess.json")
+validator = MoveValidator.new("chess.json", validate_ggn: true)
 result = validator.validate_move("CHESS:P", "e2", "e4", board_state, "CHESS")
 
 if result[:valid]
@@ -614,12 +665,22 @@ end
 
 ## Best Practices
 
-### 1. Always Validate in Development
+### 1. Choose Validation Level Appropriately
 
 ```ruby
-# Good: Validate during development
+# Development: Always validate for safety
+ruleset = Sashite::Ggn.load_file(filepath, validate: true)
+
+# Production with trusted data: Optimize for performance
+ruleset = Sashite::Ggn.load_file(filepath, validate: false)
+
+# Production with untrusted data: Validate first, then cache
 def load_rules_safely(filepath)
-  return Sashite::Ggn.load_file(filepath, validate: true)
+  # Validate once during deployment
+  Sashite::Ggn.validate!(JSON.parse(File.read(filepath)))
+
+  # Then use fast loading in runtime
+  Sashite::Ggn.load_file(filepath, validate: false)
 rescue Sashite::Ggn::ValidationError => e
   puts "GGN validation failed: #{e.message}"
   exit(1)
@@ -644,17 +705,7 @@ def handle_promotion(transitions)
 end
 ```
 
-### 3. Optimize for Your Use Case
-
-```ruby
-# For real-time applications: disable validation after testing
-production_ruleset = Sashite::Ggn.load_file("moves.json", validate: false)
-
-# For development: enable strict validation
-ENV['GGN_STRICT_VALIDATION'] = 'true' if Rails.env.development?
-```
-
-### 4. Use Consistent Game Identifiers
+### 3. Use Consistent Game Identifiers
 
 ```ruby
 # Good: Clear, consistent naming
@@ -666,13 +717,28 @@ GAME_IDENTIFIERS = {
 }.freeze
 ```
 
+### 4. Error Handling Strategy
+
+```ruby
+# Good: Comprehensive error handling
+begin
+  ruleset = Sashite::Ggn.load_file(filepath, validate: validate_level)
+rescue Sashite::Ggn::ValidationError => e
+  logger.error "GGN validation failed: #{e.message}"
+  raise GameLoadError, "Invalid move rules file"
+rescue Errno::ENOENT
+  logger.error "Move rules file not found: #{filepath}"
+  raise GameLoadError, "Move rules file missing"
+end
+```
+
 ## Compatibility and Performance
 
 - **Ruby Version**: >= 3.2.0
 - **Thread Safety**: All operations are thread-safe
 - **Memory**: Efficient hash-based lookup
 - **Performance**: O(1) piece selection, O(n) move generation
-- **Validation**: Optional schema validation using JSON Schema
+- **Validation**: Flexible validation system for different use cases
 
 ## Related Sashité Specifications
 

@@ -23,9 +23,18 @@ module Sashite
   # - **Board-focused**: Describes only board transformations, no hand management
   # - **Pseudo-legal** focus: Describes basic movement constraints only
   # - **JSON-based**: Structured, machine-readable format
-  # - **Validation** support: Built-in schema validation
+  # - **Validation** support: Built-in schema validation and logical consistency checks
   # - **Performance** optimized: Optional validation for large datasets
   # - **Cross-game** compatible: Supports hybrid games and variants
+  #
+  # = Validation Levels
+  #
+  # When `validate: true` (default), performs:
+  # - JSON Schema validation against GGN specification
+  # - Logical contradiction detection in require/prevent conditions
+  # - Implicit requirement duplication detection
+  #
+  # When `validate: false`, skips all validations for maximum performance.
   #
   # = Related Specifications
   #
@@ -46,16 +55,18 @@ module Sashite
       # 1. Reads the JSON file from the filesystem with proper encoding
       # 2. Parses the JSON content into a Ruby Hash with error handling
       # 3. Optionally validates the structure against the GGN JSON Schema
-      # 4. Creates and returns a Ruleset instance for querying moves
+      # 4. Optionally performs logical consistency validation
+      # 5. Creates and returns a Ruleset instance for querying moves
       #
       # @param filepath [String, Pathname] Path to the GGN JSON file to load.
       #   Supports both relative and absolute paths.
-      # @param validate [Boolean] Whether to validate against GGN schema (default: true).
-      #   Set to false to skip validation for improved performance on large documents.
+      # @param validate [Boolean] Whether to perform all validations (default: true).
+      #   When false, skips JSON schema validation AND internal logical validations
+      #   for maximum performance.
       # @param encoding [String] File encoding to use when reading (default: 'UTF-8').
       #   Most GGN files should use UTF-8 encoding.
       #
-      # @return [Ruleset] A Ruleset instance containing the parsed and validated GGN data.
+      # @return [Ruleset] A Ruleset instance containing the parsed GGN data.
       #   Use this instance to query pseudo-legal moves for specific pieces and positions.
       #
       # @raise [ValidationError] If any of the following conditions occur:
@@ -63,6 +74,7 @@ module Sashite
       #   - File contains invalid JSON syntax
       #   - File permissions prevent reading
       #   - When validation is enabled: data doesn't conform to GGN schema
+      #   - When validation is enabled: logical contradictions or implicit duplications found
       #
       # @example Loading a chess piece definition with full validation
       #   begin
@@ -89,7 +101,7 @@ module Sashite
       #
       # @example Loading large datasets without validation for performance
       #   begin
-      #     # Skip validation for large files to improve loading performance
+      #     # Skip all validations for large files to improve loading performance
       #     large_dataset = Sashite::Ggn.load_file('data/all_variants.json', validate: false)
       #     puts "Loaded GGN data without validation"
       #   rescue Sashite::Ggn::ValidationError => e
@@ -123,8 +135,8 @@ module Sashite
         # Validate against GGN schema if requested
         validate_schema(data, file_path) if validate
 
-        # Create and return Ruleset instance
-        Ruleset.new(data)
+        # Create and return Ruleset instance with validation option
+        Ruleset.new(data, validate: validate)
       end
 
       # Loads GGN data directly from a JSON string.
@@ -133,7 +145,8 @@ module Sashite
       # database, API response, or embedded in your application) rather than a file.
       #
       # @param json_string [String] JSON string containing GGN data
-      # @param validate [Boolean] Whether to validate against GGN schema (default: true)
+      # @param validate [Boolean] Whether to perform all validations (default: true).
+      #   When false, skips JSON schema validation AND internal logical validations.
       #
       # @return [Ruleset] A Ruleset instance containing the parsed GGN data
       #
@@ -164,8 +177,8 @@ module Sashite
         # Validate against GGN schema if requested
         validate_schema(data, "<string>") if validate
 
-        # Create and return Ruleset instance
-        Ruleset.new(data)
+        # Create and return Ruleset instance with validation option
+        Ruleset.new(data, validate: validate)
       end
 
       # Loads GGN data from a Ruby Hash.
@@ -174,7 +187,8 @@ module Sashite
       # and want to create a GGN Ruleset instance with optional validation.
       #
       # @param data [Hash] Ruby Hash containing GGN data structure
-      # @param validate [Boolean] Whether to validate against GGN schema (default: true)
+      # @param validate [Boolean] Whether to perform all validations (default: true).
+      #   When false, skips JSON schema validation AND internal logical validations.
       #
       # @return [Ruleset] A Ruleset instance containing the GGN data
       #
@@ -200,14 +214,16 @@ module Sashite
         # Validate against GGN schema if requested
         validate_schema(data, "<hash>") if validate
 
-        # Create and return Ruleset instance
-        Ruleset.new(data)
+        # Create and return Ruleset instance with validation option
+        Ruleset.new(data, validate: validate)
       end
 
       # Validates a data structure against the GGN JSON Schema.
       #
       # This method can be used independently to validate GGN data without
       # creating a Ruleset instance. Useful for pre-validation or testing.
+      # Note: This only performs JSON Schema validation, not the internal
+      # logical consistency checks that Ruleset.new performs.
       #
       # @param data [Hash] The data structure to validate
       # @param context [String] Context information for error messages (default: "<data>")
@@ -230,6 +246,9 @@ module Sashite
 
       # Checks if a data structure is valid GGN format.
       #
+      # Note: This only performs JSON Schema validation, not the internal
+      # logical consistency checks that Ruleset.new performs.
+      #
       # @param data [Hash] The data structure to validate
       #
       # @return [Boolean] true if valid, false otherwise
@@ -246,6 +265,9 @@ module Sashite
       end
 
       # Returns detailed validation errors for a data structure.
+      #
+      # Note: This only performs JSON Schema validation, not the internal
+      # logical consistency checks that Ruleset.new performs.
       #
       # @param data [Hash] The data structure to validate
       #
