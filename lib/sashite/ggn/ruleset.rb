@@ -62,6 +62,10 @@ module Sashite
 
         @data = data
 
+        # Perform enhanced validations for logical consistency
+        validate_no_implicit_requirement_duplications!
+        validate_no_logical_contradictions!
+
         freeze
       end
 
@@ -303,6 +307,133 @@ module Sashite
 
           if piece && (!piece.is_a?(::String) || piece.empty?)
             raise ::ArgumentError, "Invalid piece at #{square}: #{piece.inspect}"
+          end
+        end
+      end
+
+      # Validates that transitions don't duplicate implicit requirements in the require field.
+      #
+      # According to GGN specification, implicit requirements (like the source piece
+      # being present at the source square) should NOT be explicitly specified in
+      # the require field, as this creates redundancy and potential inconsistency.
+      #
+      # @raise [ValidationError] If any transition duplicates implicit requirements
+      #
+      # @example Invalid GGN that would be rejected
+      #   {
+      #     "CHESS:K": {
+      #       "e1": {
+      #         "e2": [{
+      #           "require": { "e1": "CHESS:K" },  # ❌ Redundant implicit requirement
+      #           "perform": { "e1": null, "e2": "CHESS:K" }
+      #         }]
+      #       }
+      #     }
+      #   }
+      def validate_no_implicit_requirement_duplications!
+        @data.each do |actor, source_data|
+          source_data.each do |origin, destination_data|
+            destination_data.each do |target, transition_list|
+              transition_list.each_with_index do |transition, index|
+                validate_single_transition_implicit_requirements!(
+                  transition, actor, origin, target, index
+                )
+              end
+            end
+          end
+        end
+      end
+
+      # Validates a single transition for implicit requirement duplication.
+      #
+      # @param transition [Hash] The transition rule to validate
+      # @param actor [String] GAN identifier of the piece
+      # @param origin [String] Source square
+      # @param target [String] Destination square
+      # @param index [Integer] Index of transition for error reporting
+      #
+      # @raise [ValidationError] If implicit requirements are duplicated
+      def validate_single_transition_implicit_requirements!(transition, actor, origin, target, index)
+        return unless transition.is_a?(::Hash) && transition["require"].is_a?(::Hash)
+
+        require_conditions = transition["require"]
+
+        # Check if the source square requirement is explicitly specified
+        if require_conditions.key?(origin) && require_conditions[origin] == actor
+          raise ValidationError,
+            "Implicit requirement duplication detected in #{actor} from #{origin} to #{target} " \
+            "(transition #{index}): 'require' field explicitly specifies that #{origin} contains #{actor}, " \
+            "but this is already implicit from the move structure. Remove this redundant requirement."
+        end
+      end
+
+      # Validates that transitions don't contain logical contradictions between require and prevent.
+      #
+      # A logical contradiction occurs when the same square is required to be in
+      # the same state in both require and prevent fields. This creates an impossible
+      # condition that can never be satisfied.
+      #
+      # @raise [ValidationError] If any transition contains logical contradictions
+      #
+      # @example Invalid GGN that would be rejected
+      #   {
+      #     "CHESS:B": {
+      #       "c1": {
+      #         "f4": [{
+      #           "require": { "d2": "empty" },
+      #           "prevent": { "d2": "empty" },  # ❌ Logical contradiction
+      #           "perform": { "c1": null, "f4": "CHESS:B" }
+      #         }]
+      #       }
+      #     }
+      #   }
+      def validate_no_logical_contradictions!
+        @data.each do |actor, source_data|
+          source_data.each do |origin, destination_data|
+            destination_data.each do |target, transition_list|
+              transition_list.each_with_index do |transition, index|
+                validate_single_transition_logical_consistency!(
+                  transition, actor, origin, target, index
+                )
+              end
+            end
+          end
+        end
+      end
+
+      # Validates a single transition for logical contradictions.
+      #
+      # @param transition [Hash] The transition rule to validate
+      # @param actor [String] GAN identifier of the piece
+      # @param origin [String] Source square
+      # @param target [String] Destination square
+      # @param index [Integer] Index of transition for error reporting
+      #
+      # @raise [ValidationError] If logical contradictions are found
+      def validate_single_transition_logical_consistency!(transition, actor, origin, target, index)
+        return unless transition.is_a?(::Hash)
+
+        require_conditions = transition["require"]
+        prevent_conditions = transition["prevent"]
+
+        # Skip if either field is missing or not a hash
+        return unless require_conditions.is_a?(::Hash) && prevent_conditions.is_a?(::Hash)
+
+        # Find squares that appear in both require and prevent
+        conflicting_squares = require_conditions.keys & prevent_conditions.keys
+
+        # Check each conflicting square for state contradictions
+        conflicting_squares.each do |square|
+          required_state = require_conditions[square]
+          prevented_state = prevent_conditions[square]
+
+          # Logical contradiction: same state required and prevented
+          if required_state == prevented_state
+            raise ValidationError,
+              "Logical contradiction detected in #{actor} from #{origin} to #{target} " \
+              "(transition #{index}): square #{square} cannot simultaneously " \
+              "require state '#{required_state}' and prevent state '#{prevented_state}'. " \
+              "This creates an impossible condition that can never be satisfied."
           end
         end
       end
