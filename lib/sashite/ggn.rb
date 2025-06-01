@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'json'
-require 'json_schemer'
-require 'pathname'
+require "json"
+require "json_schemer"
+require "pathname"
 
 require_relative File.join("ggn", "ruleset")
 require_relative File.join("ggn", "schema")

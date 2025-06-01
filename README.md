@@ -40,7 +40,7 @@ gem install sashite-ggn
 ### Basic Example: Loading Move Rules
 
 ```ruby
-require "sashite-ggn"
+require "sashite/ggn"
 
 # Load GGN data from file (with full validation by default)
 ruleset = Sashite::Ggn.load_file("chess_moves.json")

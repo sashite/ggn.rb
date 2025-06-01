@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "../../lib/sashite-ggn"
-require 'tempfile'
-require 'json'
+require "tempfile"
+require "json"
 
 puts "=== MINIMAL GGN TEST SUITE ==="
 
