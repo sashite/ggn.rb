@@ -5,39 +5,40 @@ Gem::Specification.new do |spec|
   spec.version                = ::File.read("VERSION.semver").chomp
   spec.author                 = "Cyril Kato"
   spec.email                  = "contact@cyril.email"
-  spec.summary                = "General Gameplay Notation (GGN) library for board-to-board game transformations"
-  spec.description            = "A Ruby implementation of the General Gameplay Notation (GGN) specification. GGN is a rule-agnostic, JSON-based format for describing pseudo-legal board-to-board transformations in abstract strategy board games. This library provides parsing, validation, and evaluation capabilities for GGN documents, focusing exclusively on piece movements, captures, and transformations on the game board. Features flexible validation system for both safety and performance. Supports Chess, Shogi, Xiangqi, and custom variants without hand management or piece drops."
+  spec.summary                = "General Gameplay Notation (GGN) - movement possibilities for board games"
+  spec.description            = "A Ruby implementation of the General Gameplay Notation (GGN) specification. GGN is a rule-agnostic, JSON-based format for describing pseudo-legal movement possibilities in abstract strategy board games. This library provides parsing, validation, and querying capabilities for GGN documents, supporting piece movements, captures, drops, and complex transformations. Features include movement oracles, pre-condition evaluation, and STN-based state transitions. Supports Chess, Shogi, Xiangqi, and custom variants with full hand/reserve management."
   spec.homepage               = "https://github.com/sashite/ggn.rb"
   spec.license                = "MIT"
   spec.files                  = ::Dir["LICENSE.md", "README.md", "lib/**/*.rb"]
   spec.required_ruby_version  = ">= 3.2.0"
 
-  # Runtime dependencies
-  spec.add_dependency "json_schemer", "~> 2.4.0"
+  spec.add_dependency "sashite-cell", "~> 2.0"
+  spec.add_dependency "sashite-hand", "~> 1.0"
+  spec.add_dependency "sashite-qpi", "~> 1.0"
+  spec.add_dependency "sashite-stn", "~> 1.0"
 
   spec.metadata = {
     "bug_tracker_uri"       => "https://github.com/sashite/ggn.rb/issues",
     "documentation_uri"     => "https://rubydoc.info/github/sashite/ggn.rb/main",
     "homepage_uri"          => "https://github.com/sashite/ggn.rb",
     "source_code_uri"       => "https://github.com/sashite/ggn.rb",
-    "specification_uri"     => "https://sashite.dev/documents/ggn/1.0.0/",
+    "specification_uri"     => "https://sashite.dev/specs/ggn/1.0.0/",
     "rubygems_mfa_required" => "true",
     "keywords"              => %w[
+      board-game
       chess
       game
       gameplay
-      makruk
+      json
+      movement-possibilities
       notation
       pseudo-legal-move
+      rule-agnostic
       serialization
       shogi
-      xiangqi
-      board-game
       strategy
-      json
       validation
-      performance
-      rule-agnostic
+      xiangqi
     ].sort.join(", ")
   }
 end
