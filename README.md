@@ -5,20 +5,20 @@
 ![Ruby](https://github.com/sashite/ggn.rb/actions/workflows/main.yml/badge.svg?branch=main)
 [![License](https://img.shields.io/github/license/sashite/ggn.rb?label=License&logo=github)](https://github.com/sashite/ggn.rb/raw/main/LICENSE.md)
 
-> **GGN** (General Gameplay Notation) implementation for the Ruby language — a rule-agnostic format for describing **movement possibilities** in abstract strategy board games.
+> **GGN** (General Gameplay Notation) implementation for the Ruby language — a pure, functional library for evaluating **movement possibilities** in abstract strategy board games.
 
 ## What is GGN?
 
-GGN (General Gameplay Notation) is a rule-agnostic format that describes **pseudo-legal moves** in board games. It answers a fundamental question: _"Can this piece, currently at this location, reach that location?"_ — while remaining completely agnostic about game-specific rules like check, ko, or repetition.
+GGN (General Gameplay Notation) is a rule-agnostic format that describes **pseudo-legal moves** in board games. It answers: _"Can this piece, currently at this location, reach that location?"_ — while remaining agnostic about game-specific rules like check, ko, or repetition.
 
-Think of GGN as a **movement possibility oracle** that encodes:
+GGN serves as a **movement possibility oracle** that encodes:
 - Which piece can move
 - From which location
 - To which location
 - Under what pre-conditions (`must` and `deny`)
 - What state changes occur (`diff` in STN format)
 
-This gem implements the [GGN Specification v1.0.0](https://sashite.dev/specs/ggn/1.0.0/), providing a functional, immutable API for working with movement possibility data.
+This gem implements the [GGN Specification v1.0.0](https://sashite.dev/specs/ggn/1.0.0/), providing a pure functional API for working with movement possibilities.
 
 ## Installation
 
@@ -47,7 +47,7 @@ GGN builds upon the Sashité specification ecosystem:
 ```ruby
 require "sashite/ggn"
 
-# Define movement possibilities for a chess pawn
+# GGN data as a Ruby hash (loaded externally)
 ggn_data = {
   "C:P" => {
     "e2" => {
@@ -65,55 +65,126 @@ ggn_data = {
   }
 }
 
-# Create a movement oracle
-oracle = Sashite::Ggn.parse(ggn_data)
+# Create a ruleset from the GGN data
+ruleset = Sashite::Ggn.parse(ggn_data)
 
-# Query: Can white pawn move from e2 to e4?
+# Navigate through the movement hierarchy
+engine = ruleset.select("C:P").from("e2").to("e4")
+
+# Evaluate the move
 board_state = { "e2" => "C:P", "e3" => nil, "e4" => nil }
-possibilities = oracle.query("C:P", "e2", "e4", board_state)
+transitions = engine.where(board_state)
 
-if possibilities.any?
-  transition = possibilities.first
+if transitions.any?
   puts "Move is possible!"
-  puts "State changes: #{transition}"
+  transitions.each { |t| puts "State changes: #{t}" }
 end
 ```
 
-## Loading GGN Data
+## API Reference
 
-The gem focuses on processing GGN data structures (Ruby hashes). Loading from files is left to the user's preference:
+### Main Module
+
+#### `Sashite::Ggn.parse(data) → Ruleset`
+
+Creates a Ruleset from GGN data hash.
 
 ```ruby
-# Using JSON (requires 'json' gem)
-require 'json'
-data = JSON.parse(File.read('chess_moves.json'))
-oracle = Sashite::Ggn.parse(data)
+ruleset = Sashite::Ggn.parse(ggn_data)
+```
 
-# Using YAML
-require 'yaml'
-data = YAML.load_file('chess_moves.yml')
-oracle = Sashite::Ggn.parse(data)
+#### `Sashite::Ggn.valid?(data) → Boolean`
 
-# Using MessagePack
-require 'msgpack'
-data = MessagePack.unpack(File.read('chess_moves.msgpack'))
-oracle = Sashite::Ggn.parse(data)
+Validates GGN data structure against the specification.
 
-# Direct Ruby hash
-data = {
-  "C:K" => {
-    "e1" => {
-      "e2" => [
-        {
-          "must" => { "e2" => "empty" },
-          "deny" => {},
-          "diff" => { "board" => { "e1" => nil, "e2" => "C:K" }, "toggle" => true }
-        }
-      ]
-    }
-  }
-}
-oracle = Sashite::Ggn.parse(data)
+```ruby
+Sashite::Ggn.valid?(ggn_data) # => true
+```
+
+### Navigation Chain
+
+The API follows GGN's hierarchical structure through method chaining:
+
+```ruby
+ruleset.select(piece)    # → Source
+       .from(origin)     # → Destination
+       .to(target)       # → Engine
+       .where(board)     # → Array<Transition>
+```
+
+### Ruleset Class
+
+The entry point for querying movement rules.
+
+#### `#select(piece) → Source`
+
+Selects movement rules for a specific piece type.
+
+```ruby
+source = ruleset.select("C:K")  # Chess king
+source = ruleset.select("s:+p") # Shogi promoted pawn (gote)
+```
+
+#### `#pseudo_legal_transitions(board_state) → Array`
+
+Generates all possible moves for the current position.
+
+```ruby
+all_moves = ruleset.pseudo_legal_transitions(board_state)
+# => [["C:K", "e1", "e2", [...]], ["C:Q", "d1", "d4", [...]], ...]
+
+all_moves.each do |piece, from, to, transitions|
+  puts "#{piece}: #{from} → #{to} (#{transitions.size} variants)"
+end
+```
+
+### Source Class
+
+Represents possible source positions for a piece type.
+
+#### `#from(origin) → Destination`
+
+Gets possible destinations from a source position.
+
+```ruby
+destinations = source.from("e1")
+```
+
+### Destination Class
+
+Represents possible destination squares from a source.
+
+#### `#to(target) → Engine`
+
+Creates an engine for evaluating a specific move.
+
+```ruby
+engine = destinations.to("e2")
+```
+
+### Engine Class
+
+Evaluates move validity under given board conditions.
+
+#### `#where(board_state) → Array<Transition>`
+
+Returns valid transitions for the current board state.
+
+```ruby
+board = { "e1" => "C:K", "e2" => nil }
+transitions = engine.where(board)
+# => [#<Sashite::Stn::Transition ...>]
+```
+
+### Transition Class (from sashite-stn)
+
+Represents state changes from a move.
+
+```ruby
+transition = transitions.first
+transition.board_changes  # => { "e1" => nil, "e2" => "C:K" }
+transition.hand_changes   # => {}
+transition.toggle?        # => true
 ```
 
 ## GGN Format
@@ -126,8 +197,8 @@ oracle = Sashite::Ggn.parse(data)
     "<source-location>" => {
       "<destination-location>" => [
         {
-          "must" => { "<location>" => "<required-state>", ... },
-          "deny" => { "<location>" => "<forbidden-state>", ... },
+          "must" => { "<location>" => "<state>", ... },
+          "deny" => { "<location>" => "<state>", ... },
           "diff" => { /* STN format */ }
         }
       ]
@@ -155,78 +226,13 @@ oracle = Sashite::Ggn.parse(data)
 | `"enemy"` | Location must contain an opposing piece |
 | QPI string | Location must contain exactly this piece |
 
-## API Reference
-
-### Module Methods
-
-#### `Sashite::Ggn.parse(data) → Oracle`
-
-Parses GGN data hash into an immutable Oracle instance.
-
-```ruby
-oracle = Sashite::Ggn.parse(ggn_data)
-```
-
-#### `Sashite::Ggn.valid?(data) → Boolean`
-
-Validates GGN data structure.
-
-```ruby
-Sashite::Ggn.valid?(ggn_data) # => true
-```
-
-### Oracle Class
-
-#### `#query(piece, source, destination, board_state) → Array<Transition>`
-
-Queries movement possibilities for a specific move.
-
-```ruby
-possibilities = oracle.query("C:K", "e1", "e2", board_state)
-# => [#<Sashite::Stn::Transition ...>]
-```
-
-#### `#possibilities_from(piece, source, board_state) → Hash`
-
-Gets all possible destinations from a source location.
-
-```ruby
-destinations = oracle.possibilities_from("C:K", "e1", board_state)
-# => { "e2" => [...], "d1" => [...], "f1" => [...] }
-```
-
-#### `#all_possibilities(board_state) → Array`
-
-Generates all possible moves for the current board state.
-
-```ruby
-all_moves = oracle.all_possibilities(board_state)
-# => [["C:K", "e1", "e2", [...]], ["C:Q", "d1", "d4", [...]], ...]
-```
-
-#### `#pieces → Array<String>`
-
-Returns all piece types defined in the oracle.
-
-```ruby
-oracle.pieces # => ["C:K", "C:Q", "C:R", "C:B", "C:N", "C:P"]
-```
-
-#### `#to_h → Hash`
-
-Returns the original GGN data structure.
-
-```ruby
-oracle.to_h # => { "C:K" => { ... } }
-```
-
-## Examples
+## Usage Examples
 
 ### Simple Movement
 
 ```ruby
 # King moves one square
-{
+ggn_data = {
   "C:K" => {
     "e1" => {
       "e2" => [
@@ -242,13 +248,18 @@ oracle.to_h # => { "C:K" => { ... } }
     }
   }
 }
+
+ruleset = Sashite::Ggn.parse(ggn_data)
+board = { "e1" => "C:K", "e2" => nil }
+
+transitions = ruleset.select("C:K").from("e1").to("e2").where(board)
 ```
 
 ### Capture
 
 ```ruby
 # Pawn captures diagonally
-{
+ggn_data = {
   "C:P" => {
     "e4" => {
       "f5" => [
@@ -264,13 +275,54 @@ oracle.to_h # => { "C:K" => { ... } }
     }
   }
 }
+
+ruleset = Sashite::Ggn.parse(ggn_data)
+board = { "e4" => "C:P", "f5" => "c:p" }
+
+transitions = ruleset.select("C:P").from("e4").to("f5").where(board)
 ```
 
-### Castling (Multi-piece Movement)
+### Promotion Choices
+
+```ruby
+# Pawn promotion with multiple outcomes
+ggn_data = {
+  "C:P" => {
+    "e7" => {
+      "e8" => [
+        {
+          "must" => { "e8" => "empty" },
+          "deny" => {},
+          "diff" => { "board" => { "e7" => nil, "e8" => "C:Q" }, "toggle" => true }
+        },
+        {
+          "must" => { "e8" => "empty" },
+          "deny" => {},
+          "diff" => { "board" => { "e7" => nil, "e8" => "C:N" }, "toggle" => true }
+        }
+      ]
+    }
+  }
+}
+
+ruleset = Sashite::Ggn.parse(ggn_data)
+board = { "e7" => "C:P", "e8" => nil }
+
+transitions = ruleset.select("C:P").from("e7").to("e8").where(board)
+
+transitions.each_with_index do |t, i|
+  promoted_piece = t.board_changes["e8"]
+  puts "Choice #{i + 1}: promotes to #{promoted_piece}"
+end
+# => Choice 1: promotes to C:Q
+# => Choice 2: promotes to C:N
+```
+
+### Complex Moves (Castling)
 
 ```ruby
 # King-side castling
-{
+ggn_data = {
   "C:+K" => {
     "e1" => {
       "g1" => [
@@ -295,13 +347,24 @@ oracle.to_h # => { "C:K" => { ... } }
     }
   }
 }
+
+ruleset = Sashite::Ggn.parse(ggn_data)
+board = { "e1" => "C:+K", "f1" => nil, "g1" => nil, "h1" => "C:+R" }
+
+transitions = ruleset.select("C:+K").from("e1").to("g1").where(board)
+
+if transitions.any?
+  puts "Castling is possible!"
+  puts "Result: #{transitions.first.board_changes}"
+  # => {"e1"=>nil, "g1"=>"C:K", "h1"=>nil, "f1"=>"C:R"}
+end
 ```
 
 ### En Passant
 
 ```ruby
 # En passant capture
-{
+ggn_data = {
   "C:P" => {
     "e5" => {
       "f6" => [
@@ -317,9 +380,7 @@ oracle.to_h # => { "C:K" => { ... } }
               "f6" => "C:P",
               "f5" => nil
             },
-            "hands" => {
-              "c:p" => 1
-            },
+            "hands" => { "c:p" => 1 },
             "toggle" => true
           }
         }
@@ -327,43 +388,18 @@ oracle.to_h # => { "C:K" => { ... } }
     }
   }
 }
-```
 
-### Promotion Choices
+ruleset = Sashite::Ggn.parse(ggn_data)
+board = { "e5" => "C:P", "f5" => "c:-p", "f6" => nil }
 
-```ruby
-# Pawn promotion to queen or knight
-{
-  "C:P" => {
-    "e7" => {
-      "e8" => [
-        {
-          "must" => { "e8" => "empty" },
-          "deny" => {},
-          "diff" => {
-            "board" => { "e7" => nil, "e8" => "C:Q" },
-            "toggle" => true
-          }
-        },
-        {
-          "must" => { "e8" => "empty" },
-          "deny" => {},
-          "diff" => {
-            "board" => { "e7" => nil, "e8" => "C:N" },
-            "toggle" => true
-          }
-        }
-      ]
-    }
-  }
-}
+transitions = ruleset.select("C:P").from("e5").to("f6").where(board)
 ```
 
 ### Piece Drop (Shōgi-style)
 
 ```ruby
-# Drop pawn from hand to board
-{
+# Drop pawn from hand with file restriction
+ggn_data = {
   "S:P" => {
     "*" => {
       "e4" => [
@@ -384,14 +420,17 @@ oracle.to_h # => { "C:K" => { ... } }
     }
   }
 }
+
+ruleset = Sashite::Ggn.parse(ggn_data)
+board = { "e4" => nil, "e5" => nil }  # No pawns on file
+
+transitions = ruleset.select("S:P").from("*").to("e4").where(board)
 ```
 
 ## Working with Board State
 
-### Board State Representation
-
 ```ruby
-# Board state is a hash of location => piece
+# Board state representation
 board_state = {
   "e1" => "C:K",   # White king on e1
   "d1" => "C:Q",   # White queen on d1
@@ -400,185 +439,138 @@ board_state = {
   "f3" => nil      # Empty square
 }
 
-# Including hand/reserve state (when relevant)
-full_state = {
-  board: board_state,
-  hands: { "S:P" => 2, "s:p" => 1 }  # Pieces in reserve
-}
+# Generate all moves for a position
+ruleset = Sashite::Ggn.parse(ggn_data)
+all_moves = ruleset.pseudo_legal_transitions(board_state)
+
+all_moves.each do |piece, from, to, transitions|
+  puts "#{piece}: #{from} → #{to} (#{transitions.size} variants)"
+end
+
+# Check specific piece moves
+king_moves = ruleset.select("C:K").from("e1")
+queen_moves = ruleset.select("C:Q").from("d1")
 ```
 
-### Evaluating Moves
+## Loading GGN Data
+
+The gem focuses on processing GGN data structures. Loading from files is left to user preference:
 
 ```ruby
-def evaluate_move(oracle, piece, from, to, board)
-  possibilities = oracle.query(piece, from, to, board)
+# Using JSON (requires 'json' gem)
+require 'json'
+data = JSON.parse(File.read('chess_moves.json'))
+ruleset = Sashite::Ggn.parse(data)
 
-  case possibilities.size
-  when 0
-    puts "Move is not possible"
-    nil
-  when 1
-    transition = possibilities.first
-    puts "Move is valid"
-    apply_transition(board, transition)
-  else
-    puts "Multiple outcomes possible (e.g., promotion)"
-    # Let user choose
-    possibilities
-  end
-end
+# Using YAML
+require 'yaml'
+data = YAML.load_file('chess_moves.yml')
+ruleset = Sashite::Ggn.parse(data)
 
-def apply_transition(board, transition)
-  new_board = board.dup
+# Using MessagePack
+require 'msgpack'
+data = MessagePack.unpack(File.read('chess_moves.msgpack'))
+ruleset = Sashite::Ggn.parse(data)
 
-  # Apply board changes
-  transition.board_changes.each do |location, piece|
-    new_board[location] = piece
-  end
-
-  new_board
-end
+# Direct Ruby hash
+data = {
+  "C:K" => {
+    "e1" => {
+      "e2" => [
+        {
+          "must" => { "e2" => "empty" },
+          "deny" => {},
+          "diff" => { "board" => { "e1" => nil, "e2" => "C:K" }, "toggle" => true }
+        }
+      ]
+    }
+  }
+}
+ruleset = Sashite::Ggn.parse(data)
 ```
 
-### Move Generation
+## Advanced Usage
+
+### Move Generation and Filtering
 
 ```ruby
 # Generate all pseudo-legal moves
-def generate_moves(oracle, board)
-  oracle.all_possibilities(board).flat_map do |piece, source, destination, transitions|
-    transitions.map do |transition|
-      {
-        piece: piece,
-        from: source,
-        to: destination,
-        transition: transition
-      }
-    end
-  end
+all_moves = ruleset.pseudo_legal_transitions(board_state)
+
+# Filter for specific piece type
+king_moves = all_moves.select { |piece, _, _, _| piece == "C:K" }
+
+# Filter for captures
+captures = all_moves.select do |_, _, _, transitions|
+  transitions.any? { |t| t.board_changes.values.compact.size > 1 }
 end
 
-# Find all moves for a specific piece
-def piece_moves(oracle, piece, source, board)
-  oracle.possibilities_from(piece, source, board)
+# Filter for promotion moves
+promotions = all_moves.select do |piece, _, _, transitions|
+  transitions.size > 1  # Multiple choices indicate promotion
 end
 ```
 
-## Integration Examples
-
-### Chess Engine Integration
+### Building Game Engines
 
 ```ruby
 class ChessEngine
   def initialize(ggn_data)
-    @oracle = Sashite::Ggn.parse(ggn_data)
+    @ruleset = Sashite::Ggn.parse(ggn_data)
   end
 
   def pseudo_legal_moves(board)
-    @oracle.all_possibilities(board)
+    @ruleset.pseudo_legal_transitions(board)
   end
 
-  def is_move_possible?(piece, from, to, board)
-    @oracle.query(piece, from, to, board).any?
+  def valid_move?(piece, from, to, board)
+    @ruleset.select(piece).from(from).to(to).where(board).any?
+  rescue KeyError
+    false
   end
 
-  def execute_move(piece, from, to, board, choice_index = 0)
-    possibilities = @oracle.query(piece, from, to, board)
-    return nil if possibilities.empty?
+  def make_move(piece, from, to, board, choice_index = 0)
+    transitions = @ruleset.select(piece).from(from).to(to).where(board)
+    return nil if transitions.empty?
 
-    transition = possibilities[choice_index]
-    apply_stn_transition(board, transition)
+    transition = transitions[choice_index]
+    apply_transition(board, transition)
   end
 
   private
 
-  def apply_stn_transition(board, stn_transition)
+  def apply_transition(board, transition)
     new_board = board.dup
-    stn_transition.board_changes.each do |loc, piece|
-      new_board[loc] = piece
-    end
+    transition.board_changes.each { |square, piece| new_board[square] = piece }
     new_board
   end
 end
 
 # Usage
-require 'json'
-ggn_data = JSON.parse(File.read('chess_rules.json'))
-engine = ChessEngine.new(ggn_data)
-
+engine = ChessEngine.new(chess_ggn_data)
 board = { "e2" => "C:P", "e3" => nil, "e4" => nil }
-if engine.is_move_possible?("C:P", "e2", "e4", board)
-  new_board = engine.execute_move("C:P", "e2", "e4", board)
+
+if engine.valid_move?("C:P", "e2", "e4", board)
+  new_board = engine.make_move("C:P", "e2", "e4", board)
 end
 ```
 
-### Custom Validator
+### Hybrid Games Support
 
 ```ruby
-class MoveValidator
-  def initialize(ggn_data)
-    @oracle = Sashite::Ggn.parse(ggn_data)
-    @data = ggn_data  # Keep raw data for explanations
-  end
+# Mix pieces from different game systems
+hybrid_ggn = {
+  "C:K" => { /* chess king rules */ },
+  "S:G" => { /* shogi gold general rules */ },
+  "X:C" => { /* xiangqi cannon rules */ }
+}
 
-  def validate(piece, from, to, board)
-    possibilities = @oracle.query(piece, from, to, board)
+ruleset = Sashite::Ggn.parse(hybrid_ggn)
 
-    {
-      valid: possibilities.any?,
-      outcomes: possibilities.size,
-      transitions: possibilities,
-      reasons: explain_constraints(piece, from, to)
-    }
-  end
-
-  private
-
-  def explain_constraints(piece, from, to)
-    return nil unless @data.dig(piece, from, to)
-
-    @data[piece][from][to].map do |variant|
-      {
-        must: variant["must"],
-        deny: variant["deny"]
-      }
-    end
-  end
-end
-```
-
-### Caching Oracle
-
-```ruby
-class CachedGgnOracle
-  def initialize
-    @oracles = {}
-  end
-
-  def load(name, data)
-    @oracles[name] = Sashite::Ggn.parse(data)
-  end
-
-  def get(name)
-    @oracles[name] || raise("Unknown oracle: #{name}")
-  end
-
-  def query(name, piece, from, to, board)
-    get(name).query(piece, from, to, board)
-  end
-end
-
-# Usage
-cache = CachedGgnOracle.new
-
-# Load different rule sets
-require 'yaml'
-cache.load(:chess, YAML.load_file('chess.yml'))
-cache.load(:shogi, YAML.load_file('shogi.yml'))
-cache.load(:xiangqi, YAML.load_file('xiangqi.yml'))
-
-# Query specific rules
-board = { "e2" => "C:P", "e4" => nil }
-cache.query(:chess, "C:P", "e2", "e4", board)
+# Each piece follows its own movement rules
+chess_king = ruleset.select("C:K").from("e1")
+shogi_gold = ruleset.select("S:G").from("5e")
+xiangqi_cannon = ruleset.select("X:C").from("e5")
 ```
 
 ## Design Principles
@@ -586,7 +578,7 @@ cache.query(:chess, "C:P", "e2", "e4", board)
 - **Functional**: Pure functions, no side effects
 - **Immutable**: All data structures are frozen
 - **Minimal**: No file I/O, no JSON parsing - pure data transformation
-- **Composable**: Oracles can be combined or filtered
+- **Composable**: Method chaining for natural navigation
 - **Spec-compliant**: Strictly follows GGN v1.0.0 specification
 - **Delegative**: Leverages sashite-cell, sashite-qpi, sashite-stn for validation
 
@@ -601,25 +593,32 @@ cache.query(:chess, "C:P", "e2", "e4", board)
 ## Error Handling
 
 ```ruby
-# Validation errors
+# Query for non-existent piece
 begin
-  oracle = Sashite::Ggn.parse(invalid_data)
-rescue Sashite::Ggn::ValidationError => e
-  puts "Invalid GGN structure: #{e.message}"
+  source = ruleset.select("INVALID:X")
+rescue KeyError => e
+  puts "Unknown piece: #{e.message}"
 end
 
-# Query errors
+# Query for invalid position
 begin
-  possibilities = oracle.query(piece, from, to, board)
+  destinations = source.from("invalid_square")
 rescue KeyError => e
-  puts "Unknown piece or location: #{e.message}"
+  puts "Invalid source position: #{e.message}"
 end
 
 # Safe querying with defaults
-def safe_query(oracle, piece, from, to, board)
-  oracle.query(piece, from, to, board)
+def safe_move_check(ruleset, piece, from, to, board)
+  ruleset.select(piece).from(from).to(to).where(board)
 rescue KeyError
   []  # Return empty array if piece/location not found
+end
+
+# Validate data before parsing
+if Sashite::Ggn.valid?(ggn_data)
+  ruleset = Sashite::Ggn.parse(ggn_data)
+else
+  puts "Invalid GGN data structure"
 end
 ```
 
