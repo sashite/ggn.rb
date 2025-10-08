@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 # frozen_string_literal: true
 
 require "simplecov"
@@ -123,7 +124,7 @@ end
 # RULESET CLASS TESTS
 # ============================================================================
 
-run_test("Ruleset initialization validates structure") do
+run_test("Ruleset initialization without validation") do
   valid_data = {
     "C:P" => {
       "e2" => {
@@ -167,7 +168,6 @@ run_test("Ruleset select method returns Source") do
   source = ruleset.select("C:K")
 
   raise "select should return Source" unless source.is_a?(Sashite::Ggn::Ruleset::Source)
-  raise "source should have correct piece" unless source.piece == "C:K"
 end
 
 run_test("Ruleset select raises KeyError for non-existent piece") do
@@ -219,42 +219,9 @@ run_test("Ruleset pieces method") do
   raise "pieces should include C:R" unless pieces.include?("C:R")
 end
 
-run_test("Ruleset to_h method") do
-  ggn_data = {
-    "C:K" => {
-      "e1" => {
-        "e2" => [
-          { "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }
-        ]
-      }
-    }
-  }
-
-  ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
-  hash = ruleset.to_h
-
-  raise "to_h should return hash" unless hash.is_a?(Hash)
-  raise "to_h should have correct structure" unless hash["C:K"]["e1"]["e2"].is_a?(Array)
-end
-
 # ============================================================================
 # SOURCE CLASS TESTS
 # ============================================================================
-
-run_test("Source initialization") do
-  source_data = {
-    "e1" => {
-      "e2" => [
-        { "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }
-      ]
-    }
-  }
-
-  source = Sashite::Ggn::Ruleset::Source.new("C:K", source_data)
-
-  raise "source should have correct piece" unless source.piece == "C:K"
-  raise "source should have correct data" unless source.data == source_data
-end
 
 run_test("Source from method returns Destination") do
   source_data = {
@@ -265,15 +232,14 @@ run_test("Source from method returns Destination") do
     }
   }
 
-  source = Sashite::Ggn::Ruleset::Source.new("C:K", source_data)
+  source = Sashite::Ggn::Ruleset::Source.new(source_data)
   destination = source.from("e1")
 
   raise "from should return Destination" unless destination.is_a?(Sashite::Ggn::Ruleset::Source::Destination)
-  raise "destination should have correct source" unless destination.source == "e1"
 end
 
 run_test("Source from raises KeyError for non-existent source") do
-  source = Sashite::Ggn::Ruleset::Source.new("C:K", {})
+  source = Sashite::Ggn::Ruleset::Source.new({})
 
   begin
     source.from("z9")
@@ -290,7 +256,7 @@ run_test("Source sources method") do
     "*" => { "e4" => [] }
   }
 
-  source = Sashite::Ggn::Ruleset::Source.new("C:K", source_data)
+  source = Sashite::Ggn::Ruleset::Source.new(source_data)
   sources = source.sources
 
   raise "sources should return array" unless sources.is_a?(Array)
@@ -306,7 +272,7 @@ run_test("Source source? method") do
     "*" => { "e4" => [] }
   }
 
-  source = Sashite::Ggn::Ruleset::Source.new("C:K", source_data)
+  source = Sashite::Ggn::Ruleset::Source.new(source_data)
 
   raise "source? should return true for existing source" unless source.source?("e1")
   raise "source? should return true for HAND" unless source.source?("*")
@@ -317,20 +283,6 @@ end
 # DESTINATION CLASS TESTS
 # ============================================================================
 
-run_test("Destination initialization") do
-  destination_data = {
-    "e2" => [
-      { "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }
-    ]
-  }
-
-  destination = Sashite::Ggn::Ruleset::Source::Destination.new("C:K", "e1", destination_data)
-
-  raise "destination should have correct piece" unless destination.piece == "C:K"
-  raise "destination should have correct source" unless destination.source == "e1"
-  raise "destination should have correct data" unless destination.data == destination_data
-end
-
 run_test("Destination to method returns Engine") do
   destination_data = {
     "e2" => [
@@ -338,15 +290,14 @@ run_test("Destination to method returns Engine") do
     ]
   }
 
-  destination = Sashite::Ggn::Ruleset::Source::Destination.new("C:K", "e1", destination_data)
+  destination = Sashite::Ggn::Ruleset::Source::Destination.new(destination_data)
   engine = destination.to("e2")
 
   raise "to should return Engine" unless engine.is_a?(Sashite::Ggn::Ruleset::Source::Destination::Engine)
-  raise "engine should have correct destination" unless engine.destination == "e2"
 end
 
 run_test("Destination to raises KeyError for non-existent destination") do
-  destination = Sashite::Ggn::Ruleset::Source::Destination.new("C:K", "e1", {})
+  destination = Sashite::Ggn::Ruleset::Source::Destination.new({})
 
   begin
     destination.to("z9")
@@ -363,7 +314,7 @@ run_test("Destination destinations method") do
     "d2" => []
   }
 
-  destination = Sashite::Ggn::Ruleset::Source::Destination.new("C:K", "e1", destination_data)
+  destination = Sashite::Ggn::Ruleset::Source::Destination.new(destination_data)
   destinations = destination.destinations
 
   raise "destinations should return array" unless destinations.is_a?(Array)
@@ -379,7 +330,7 @@ run_test("Destination destination? method") do
     "*" => []
   }
 
-  destination = Sashite::Ggn::Ruleset::Source::Destination.new("C:K", "e1", destination_data)
+  destination = Sashite::Ggn::Ruleset::Source::Destination.new(destination_data)
 
   raise "destination? should return true for existing destination" unless destination.destination?("e2")
   raise "destination? should return true for HAND" unless destination.destination?("*")
@@ -389,32 +340,6 @@ end
 # ============================================================================
 # ENGINE CLASS TESTS
 # ============================================================================
-
-run_test("Engine initialization") do
-  possibilities = [
-    { "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }
-  ]
-
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:K", "e1", "e2", possibilities)
-
-  raise "engine should have correct piece" unless engine.piece == "C:K"
-  raise "engine should have correct source" unless engine.source == "e1"
-  raise "engine should have correct destination" unless engine.destination == "e2"
-  raise "engine should have correct data" unless engine.data == possibilities
-end
-
-run_test("Engine possibilities method") do
-  possibilities = [
-    { "must" => { "e2" => "empty" }, "deny" => {}, "diff" => { "toggle" => true } },
-    { "must" => { "e2" => "enemy" }, "deny" => {}, "diff" => { "toggle" => true } }
-  ]
-
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:K", "e1", "e2", possibilities)
-  result = engine.possibilities
-
-  raise "possibilities should return array" unless result.is_a?(Array)
-  raise "possibilities should have 2 elements" unless result.size == 2
-end
 
 run_test("Engine where method evaluates conditions") do
   possibilities = [
@@ -428,15 +353,20 @@ run_test("Engine where method evaluates conditions") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("M:K", "e1", "e2", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
 
-  feen = "rnsmksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSKMSNR / M/m"
-  transitions = engine.where(feen)
+  active_side = :first
+  squares = {
+    "e1" => "M:K",
+    "e2" => nil
+  }
+
+  transitions = engine.where(active_side, squares)
 
   raise "where should return array" unless transitions.is_a?(Array)
   raise "where should return transitions for matching conditions" unless transitions.size == 1
   raise "transition should be STN Transition" unless transitions.first.is_a?(Sashite::Stn::Transition)
-  raise "transition should be STN Transition" unless transitions.first.to_h == { board: { "e1" => nil, "e2" => "M:K" }, toggle: true }
+  raise "transition should have correct board changes" unless transitions.first.to_h == { board: { "e1" => nil, "e2" => "M:K" }, toggle: true }
 end
 
 run_test("Engine where returns empty array when conditions not met") do
@@ -448,11 +378,15 @@ run_test("Engine where returns empty array when conditions not met") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:P", "e2", "e4", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
 
-  # FEEN with empty e4 (condition not met)
-  feen = "rnsmksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSKMSNR / M/m"
-  transitions = engine.where(feen)
+  active_side = :first
+  squares = {
+    "e2" => "C:P",
+    "e4" => nil  # Empty, not enemy
+  }
+
+  transitions = engine.where(active_side, squares)
 
   raise "where should return empty array when conditions not met" unless transitions.empty?
 end
@@ -469,11 +403,16 @@ run_test("Engine evaluates 'empty' keyword correctly") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:P", "e2", "e4", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
 
-  # Empty board - conditions should be met
-  feen = "8/8/8/8/8/8/8/8 / C/c"
-  transitions = engine.where(feen)
+  active_side = :first
+  squares = {
+    "e2" => "C:P",
+    "e3" => nil,
+    "e4" => nil
+  }
+
+  transitions = engine.where(active_side, squares)
 
   raise "empty keyword should be evaluated correctly" unless transitions.size == 1
 end
@@ -490,11 +429,15 @@ run_test("Engine evaluates 'enemy' keyword correctly") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:P", "e3", "e4", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
 
-  # Board with enemy piece at e4
-  feen = "8/8/8/8/4p3/8/8/8 / C/c"
-  transitions = engine.where(feen)
+  active_side = :first
+  squares = {
+    "e3" => "C:P",
+    "e4" => "c:p"  # Enemy piece
+  }
+
+  transitions = engine.where(active_side, squares)
 
   raise "enemy keyword should be evaluated correctly" unless transitions.size == 1
 end
@@ -508,13 +451,18 @@ run_test("Engine evaluates QPI identifier conditions correctly") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:K", "e1", "g1", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
 
-  # Castling position
-  feen = "+rnbq+kbn+r/+p+p+p+p+p+p+p+p/8/8/8/8/+P+P+P+P+P+P+P+P/+RNBQ+KBN+R / C/c"
-  transitions = engine.where(feen)
+  active_side = :first
+  squares = {
+    "e1" => "C:+K",
+    "h1" => "C:+R"
+  }
+
+  transitions = engine.where(active_side, squares)
 
   raise "QPI identifier conditions should be evaluated" unless transitions.is_a?(Array)
+  raise "QPI identifier conditions should match" unless transitions.size == 1
 end
 
 run_test("Engine evaluates 'deny' conditions correctly") do
@@ -529,60 +477,28 @@ run_test("Engine evaluates 'deny' conditions correctly") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("C:P", "e2", "e4", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
+
+  active_side = :first
 
   # Board with enemy at e3 - should fail deny
-  feen_with_enemy = "8/8/8/8/8/4p3/8/8 / C/c"
-  transitions_denied = engine.where(feen_with_enemy)
+  squares_denied = {
+    "e2" => "C:P",
+    "e3" => "c:p",  # Enemy piece
+    "e4" => nil
+  }
+  transitions_denied = engine.where(active_side, squares_denied)
 
   # Board without enemy at e3 - should pass
-  feen_without_enemy = "8/8/8/8/8/8/8/8 / C/c"
-  transitions_allowed = engine.where(feen_without_enemy)
+  squares_allowed = {
+    "e2" => "C:P",
+    "e3" => nil,
+    "e4" => nil
+  }
+  transitions_allowed = engine.where(active_side, squares_allowed)
 
   raise "deny should reject when condition met" unless transitions_denied.empty?
   raise "deny should allow when condition not met" unless transitions_allowed.size == 1
-end
-
-# ============================================================================
-# PSEUDO-LEGAL TRANSITIONS GENERATION
-# ============================================================================
-
-run_test("Ruleset pseudo_legal_transitions generates all moves") do
-  ggn_data = {
-    "C:P" => {
-      "e2" => {
-        "e4" => [
-          {
-            "must" => { "e3" => "empty", "e4" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e2" => nil, "e4" => "C:P" },
-              "toggle" => true
-            }
-          }
-        ],
-        "e3" => [
-          {
-            "must" => { "e3" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e2" => nil, "e3" => "C:P" },
-              "toggle" => true
-            }
-          }
-        ]
-      }
-    }
-  }
-
-  ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
-  feen = "8/8/8/8/8/8/+P7/8 / C/c"
-
-  moves = ruleset.pseudo_legal_transitions(feen)
-
-  raise "pseudo_legal_transitions should return array" unless moves.is_a?(Array)
-  raise "each move should be array with 4 elements" unless moves.all? { |m| m.is_a?(Array) && m.size == 4 }
-  raise "moves should include piece, source, destination, transitions" unless moves.first[0] == "C:P"
 end
 
 # ============================================================================
@@ -608,16 +524,21 @@ run_test("Method chaining works correctly") do
   }
 
   ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
-  feen = "8/8/8/8/8/8/8/+K7 / C/c"
+
+  active_side = :first
+  squares = {
+    "e1" => "C:K",
+    "e2" => nil
+  }
 
   transitions = ruleset
     .select("C:K")
     .from("e1")
     .to("e2")
-    .where(feen)
+    .where(active_side, squares)
 
   raise "method chaining should work" unless transitions.is_a?(Array)
-  raise "transitions should contain results" unless transitions.size >= 0
+  raise "transitions should contain results" unless transitions.size == 1
 end
 
 # ============================================================================
@@ -637,13 +558,17 @@ run_test("Engine handles HAND notation for drops") do
     }
   ]
 
-  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new("S:P", "*", "e4", possibilities)
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new(*possibilities)
 
-  # FEEN with pawn in hand
-  feen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL P/p s/S"
-  transitions = engine.where(feen)
+  active_side = :first
+  squares = {
+    "e4" => nil  # Empty square for drop
+  }
+
+  transitions = engine.where(active_side, squares)
 
   raise "HAND notation should work for drops" unless transitions.is_a?(Array)
+  raise "Drop should be allowed when square is empty" unless transitions.size == 1
 end
 
 # ============================================================================
@@ -652,7 +577,7 @@ end
 
 run_test("Validation catches invalid QPI in piece key") do
   begin
-    Sashite::Ggn::Ruleset.new({ "1nvalid" => {} })
+    Sashite::Ggn.parse({ "1nvalid" => {} })
     raise "Should have raised error for invalid QPI"
   rescue ArgumentError => e
     raise "Error should mention QPI" unless e.message.include?("QPI")
@@ -661,7 +586,7 @@ end
 
 run_test("Validation catches invalid CELL in source") do
   begin
-    Sashite::Ggn::Ruleset.new({
+    Sashite::Ggn.parse({
       "C:K" => {
         "invalid_cell" => {}
       }
@@ -674,7 +599,7 @@ end
 
 run_test("Validation catches invalid LCN in must field") do
   begin
-    Sashite::Ggn::Ruleset.new({
+    Sashite::Ggn.parse({
       "C:K" => {
         "e1" => {
           "e2" => [
@@ -695,7 +620,7 @@ end
 
 run_test("Validation catches invalid STN in diff field") do
   begin
-    Sashite::Ggn::Ruleset.new({
+    Sashite::Ggn.parse({
       "C:K" => {
         "e1" => {
           "e2" => [
@@ -742,15 +667,23 @@ run_test("Complex castling scenario") do
   }
 
   ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
-  feen = "+rnbq+kbn+r/+p+p+p+p+p+p+p+p/8/8/8/8/+P+P+P+P+P+P+P+P/+RNBQ+K2+R / C/c"
+
+  active_side = :first
+  squares = {
+    "e1" => "C:+K",
+    "f1" => nil,
+    "g1" => nil,
+    "h1" => "C:+R"
+  }
 
   transitions = ruleset
     .select("C:K")
     .from("e1")
     .to("g1")
-    .where(feen)
+    .where(active_side, squares)
 
   raise "Castling scenario should work" unless transitions.is_a?(Array)
+  raise "Castling should be allowed" unless transitions.size == 1
 end
 
 run_test("En passant capture scenario") do
@@ -777,16 +710,21 @@ run_test("En passant capture scenario") do
 
   ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
 
-  # Position with vulnerable pawn at f5
-  feen = "8/8/8/4+P-p2/8/8/8/8 / C/c"
+  active_side = :first
+  squares = {
+    "e5" => "C:P",
+    "f5" => "c:-p",  # Vulnerable enemy pawn
+    "f6" => nil
+  }
 
   transitions = ruleset
     .select("C:P")
     .from("e5")
     .to("f6")
-    .where(feen)
+    .where(active_side, squares)
 
   raise "En passant scenario should work" unless transitions.is_a?(Array)
+  raise "En passant should be allowed" unless transitions.size == 1
 end
 
 run_test("Shogi pawn drop restriction") do
@@ -814,16 +752,27 @@ run_test("Shogi pawn drop restriction") do
 
   ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
 
+  active_side = :first
+
   # Position with pawn already on file e
-  feen_blocked = "lnsgkgsnl/1r5b1/ppppppppp/9/4P4/9/PPPP1PPPP/1B5R1/LNSGKGSNL P/p s/S"
-  transitions_blocked = ruleset.select("S:P").from("*").to("e4").where(feen_blocked)
+  squares_blocked = {
+    "e1" => nil, "e2" => nil, "e3" => nil,
+    "e4" => nil,
+    "e5" => "S:P",  # Pawn already on this file
+    "e6" => nil, "e7" => nil, "e8" => nil, "e9" => nil
+  }
+  transitions_blocked = ruleset.select("S:P").from("*").to("e4").where(active_side, squares_blocked)
 
   # Position without pawn on file e
-  feen_allowed = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL P/p s/S"
-  transitions_allowed = ruleset.select("S:P").from("*").to("e4").where(feen_allowed)
+  squares_allowed = {
+    "e1" => nil, "e2" => nil, "e3" => nil,
+    "e4" => nil,
+    "e5" => nil, "e6" => nil, "e7" => nil, "e8" => nil, "e9" => nil
+  }
+  transitions_allowed = ruleset.select("S:P").from("*").to("e4").where(active_side, squares_allowed)
 
   raise "Pawn drop should be blocked when file has pawn" unless transitions_blocked.empty?
-  raise "Pawn drop should be allowed when file is clear" unless transitions_allowed.size >= 0
+  raise "Pawn drop should be allowed when file is clear" unless transitions_allowed.size == 1
 end
 
 # ============================================================================
@@ -860,10 +809,7 @@ run_test("GGN structure matches specification") do
   raise "Destination level should exist" unless destination.destination?("e4")
 
   engine = destination.to("e4")
-  raise "Possibilities should be array" unless engine.possibilities.is_a?(Array)
-  raise "Possibility should have must field" unless engine.possibilities.first.key?("must")
-  raise "Possibility should have deny field" unless engine.possibilities.first.key?("deny")
-  raise "Possibility should have diff field" unless engine.possibilities.first.key?("diff")
+  raise "Engine should be created" unless engine.is_a?(Sashite::Ggn::Ruleset::Source::Destination::Engine)
 end
 
 puts

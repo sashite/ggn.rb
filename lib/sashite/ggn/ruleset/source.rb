@@ -9,20 +9,11 @@ module Sashite
       #
       # @see https://sashite.dev/specs/ggn/1.0.0/
       class Source
-        # @return [String] The QPI piece identifier
-        attr_reader :piece
-
-        # @return [Hash] The sources data
-        attr_reader :data
-
         # Create a new Source
         #
-        # @param piece [String] QPI piece identifier
         # @param data [Hash] Sources data structure
-        def initialize(piece, data)
-          @piece = piece
+        def initialize(data)
           @data = data
-
           freeze
         end
 
@@ -37,7 +28,7 @@ module Sashite
         def from(source)
           raise ::KeyError, "Source not found: #{source}" unless source?(source)
 
-          Destination.new(piece, source, data.fetch(source))
+          Destination.new(@data.fetch(source))
         end
 
         # Return all valid source locations for this piece
@@ -47,7 +38,7 @@ module Sashite
         # @example
         #   source.sources # => ["e1", "d1", "*"]
         def sources
-          data.keys
+          @data.keys
         end
 
         # Check if location is a valid source for this piece
@@ -58,7 +49,7 @@ module Sashite
         # @example
         #   source.source?("e1") # => true
         def source?(location)
-          data.key?(location)
+          @data.key?(location)
         end
       end
     end

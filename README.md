@@ -52,7 +52,6 @@ GGN builds upon foundational Sashité specifications:
 
 ```ruby
 gem "sashite-cell"  # Coordinate Encoding for Layered Locations
-gem "sashite-feen"  # Forsyth–Edwards Enhanced Notation
 gem "sashite-hand"  # Hold And Notation Designator
 gem "sashite-lcn"   # Location Condition Notation
 gem "sashite-qpi"   # Qualified Piece Identifier
@@ -66,7 +65,7 @@ gem "sashite-stn"   # State Transition Notation
 ```ruby
 require "sashite/ggn"
 
-# Parse GGN data structure
+# Define GGN data structure
 ggn_data = {
   "C:P" => {
     "e2" => {
@@ -84,12 +83,26 @@ ggn_data = {
   }
 }
 
+# Validate GGN structure
+Sashite::Ggn.valid?(ggn_data) # => true
+
+# Parse into ruleset
 ruleset = Sashite::Ggn.parse(ggn_data)
 
 # Query movement possibility through method chaining
-feen = "+rnbq+kbn+r/+p+p+p+p+p+p+p+p/8/8/8/8/+P+P+P+P+P+P+P+P/+RNBQ+KBN+R / C/c"
-transitions = ruleset.select("C:P").from("e2").to("e4").where(feen)
+source = ruleset.select("C:P")
+destination = source.from("e2")
+engine = destination.to("e4")
 
+# Evaluate against position
+active_side = :first
+squares = {
+  "e2" => "C:P",
+  "e3" => nil,
+  "e4" => nil
+}
+
+transitions = engine.where(active_side, squares)
 transitions.any? # => true
 ```
 
@@ -152,22 +165,6 @@ source = ruleset.select("C:K")
 
 ---
 
-#### `#pseudo_legal_transitions(feen) → Array<Array>`
-
-Generates all pseudo-legal moves for the given position.
-
-```ruby
-moves = ruleset.pseudo_legal_transitions(feen)
-# => [["C:P", "e2", "e4", [#<Transition...>]], ...]
-```
-
-**Parameters:**
-- `feen` (String): Position in FEEN format
-
-**Returns:** `Array<Array>` — Array of `[piece, source, destination, transitions]` tuples
-
----
-
 #### `#piece?(piece) → Boolean`
 
 Checks if ruleset contains movement rules for specified piece.
@@ -192,18 +189,6 @@ ruleset.pieces # => ["C:K", "C:Q", "C:P", ...]
 ```
 
 **Returns:** `Array<String>` — QPI piece identifiers
-
----
-
-#### `#to_h → Hash`
-
-Converts ruleset to hash representation.
-
-```ruby
-ruleset.to_h # => { "C:K" => { "e1" => { "e2" => [...] } } }
-```
-
-**Returns:** `Hash` — GGN data structure
 
 ---
 
@@ -307,31 +292,26 @@ destination.destination?("e2") # => true
 
 Evaluates movement possibility under given position conditions.
 
-#### `#where(feen) → Array<Transition>`
+#### `#where(active_side, squares) → Array<Transition>`
 
 Evaluates movement against position and returns valid transitions.
 
 ```ruby
-transitions = engine.where(feen)
+active_side = :first
+squares = {
+  "e2" => "C:P",  # White pawn on e2
+  "e3" => nil,    # Empty square
+  "e4" => nil     # Empty square
+}
+
+transitions = engine.where(active_side, squares)
 ```
 
 **Parameters:**
-- `feen` (String): Position in FEEN format
+- `active_side` (Symbol): Active player side (`:first` or `:second`)
+- `squares` (Hash): Board state where keys are CELL coordinates and values are QPI identifiers or `nil` for empty squares
 
 **Returns:** `Array<Sashite::Stn::Transition>` — Valid state transitions (may be empty)
-
----
-
-#### `#possibilities → Array<Hash>`
-
-Returns raw movement possibility rules.
-
-```ruby
-engine.possibilities
-# => [{ "must" => {...}, "deny" => {...}, "diff" => {...} }]
-```
-
-**Returns:** `Array<Hash>` — Movement possibility specifications
 
 ---
 
@@ -374,28 +354,65 @@ engine.possibilities
 
 ```ruby
 # Query specific movement
-feen = "+rnbq+kbn+r/+p+p+p+p+p+p+p+p/8/8/8/8/+P+P+P+P+P+P+P+P/+RNBQ+KBN+R / C/c"
+active_side = :first
+squares = {
+  "e2" => "C:P",
+  "e3" => nil,
+  "e4" => nil
+}
 
 transitions = ruleset
   .select("C:P")
   .from("e2")
   .to("e4")
-  .where(feen)
+  .where(active_side, squares)
 
 transitions.size # => 1
 transitions.first.board_changes # => { "e2" => nil, "e4" => "C:P" }
 ```
 
-### Generate All Pseudo-Legal Moves
+### Building Board State
 
 ```ruby
+# Example: Build squares hash from FEEN position
+require "sashite/feen"
+
 feen = "+rnbq+kbn+r/+p+p+p+p+p+p+p+p/8/8/8/8/+P+P+P+P+P+P+P+P/+RNBQ+KBN+R / C/c"
+position = Sashite::Feen.parse(feen)
 
-all_moves = ruleset.pseudo_legal_transitions(feen)
+# Extract active player side
+active_side = position.styles.active.side # => :first
 
-all_moves.each do |piece, source, destination, transitions|
-  puts "#{piece}: #{source} → #{destination} (#{transitions.size} variants)"
+# Build squares hash from placement
+squares = {}
+position.placement.ranks.each_with_index do |rank, rank_idx|
+  rank.each_with_index do |piece, file_idx|
+    # Convert rank_idx and file_idx to CELL coordinate
+    cell = Sashite::Cell.from_indices(file_idx, 7 - rank_idx)
+    squares[cell] = piece&.to_s
+  end
 end
+
+# Use with GGN
+transitions = engine.where(active_side, squares)
+```
+
+### Capture Validation
+
+```ruby
+# Check capture possibility
+active_side = :first
+squares = {
+  "e4" => "C:P",  # White pawn
+  "d5" => "c:p",  # Black pawn (enemy)
+  "f5" => "c:p"   # Black pawn (enemy)
+}
+
+# Pawn can capture diagonally
+capture_engine = ruleset.select("C:P").from("e4").to("d5")
+transitions = capture_engine.where(active_side, squares)
+
+transitions.any? # => true if capture is allowed
 ```
 
 ### Existence Checks
@@ -424,10 +441,6 @@ source.sources # => ["e1", "d1", "f1", ...]
 
 # List destinations from a source
 destination.destinations # => ["d1", "d2", "e2", "f2", "f1"]
-
-# Access raw possibilities
-engine.possibilities
-# => [{ "must" => {...}, "deny" => {...}, "diff" => {...} }]
 ```
 
 ---
@@ -437,8 +450,9 @@ engine.possibilities
 - **Functional**: Pure functions with no side effects
 - **Immutable**: All data structures frozen and unchangeable
 - **Composable**: Clean method chaining for natural query flow
+- **Minimal API**: Only exposes what's necessary
 - **Type-safe**: Strict validation of all inputs
-- **Delegative**: Leverages CELL, FEEN, HAND, LCN, QPI, STN specifications
+- **Lightweight**: Minimal dependencies, no unnecessary parsing
 - **Spec-compliant**: Strictly follows GGN v1.0.0 specification
 
 ---
@@ -481,7 +495,6 @@ end
 
 - [GGN v1.0.0](https://sashite.dev/specs/ggn/1.0.0/) — General Gameplay Notation specification
 - [CELL v1.0.0](https://sashite.dev/specs/cell/1.0.0/) — Coordinate encoding
-- [FEEN v1.0.0](https://sashite.dev/specs/feen/1.0.0/) — Position notation
 - [HAND v1.0.0](https://sashite.dev/specs/hand/1.0.0/) — Reserve notation
 - [LCN v1.0.0](https://sashite.dev/specs/lcn/1.0.0/) — Location conditions
 - [QPI v1.0.0](https://sashite.dev/specs/qpi/1.0.0/) — Piece identification

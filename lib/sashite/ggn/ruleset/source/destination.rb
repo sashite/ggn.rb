@@ -10,25 +10,11 @@ module Sashite
         #
         # @see https://sashite.dev/specs/ggn/1.0.0/
         class Destination
-          # @return [String] The QPI piece identifier
-          attr_reader :piece
-
-          # @return [String] The source location
-          attr_reader :source
-
-          # @return [Hash] The destinations data
-          attr_reader :data
-
           # Create a new Destination
           #
-          # @param piece [String] QPI piece identifier
-          # @param source [String] Source location
           # @param data [Hash] Destinations data structure
-          def initialize(piece, source, data)
-            @piece = piece
-            @source = source
+          def initialize(data)
             @data = data
-
             freeze
           end
 
@@ -43,7 +29,7 @@ module Sashite
           def to(destination)
             raise ::KeyError, "Destination not found: #{destination}" unless destination?(destination)
 
-            Engine.new(piece, source, destination, data.fetch(destination))
+            Engine.new(*@data.fetch(destination))
           end
 
           # Return all valid destinations from this source
@@ -53,7 +39,7 @@ module Sashite
           # @example
           #   destination.destinations # => ["d1", "d2", "e2", "f2", "f1"]
           def destinations
-            data.keys
+            @data.keys
           end
 
           # Check if location is a valid destination from this source
@@ -64,7 +50,7 @@ module Sashite
           # @example
           #   destination.destination?("e2") # => true
           def destination?(location)
-            data.key?(location)
+            @data.key?(location)
           end
         end
       end
