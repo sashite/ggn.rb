@@ -144,7 +144,7 @@ module Sashite
       # @raise [ArgumentError] If sources structure is invalid
       # @return [void]
       def validate_sources!(sources, piece)
-        raise ::ArgumentError, "Sources for #{piece} must be a Hash" unless sources.is_a?(Hash)
+        raise ::ArgumentError, "Sources for #{piece} must be a Hash" unless sources.is_a?(::Hash)
 
         sources.each do |source, destinations|
           validate_location!(source, piece)
