@@ -571,6 +571,76 @@ run_test("Engine handles HAND notation for drops") do
   raise "Drop should be allowed when square is empty" unless transitions.size == 1
 end
 
+run_test("Validation rejects HAND→HAND movements (source='*' and destination='*')") do
+  # Test case 1: Direct HAND→HAND should be rejected
+  hand_to_hand_ggn = {
+    "S:P" => {
+      "*" => {
+        "*" => [
+          {
+            "must" => {},
+            "deny" => {},
+            "diff" => { "toggle" => true }
+          }
+        ]
+      }
+    }
+  }
+
+  begin
+    Sashite::Ggn.parse(hand_to_hand_ggn)
+    raise "HAND→HAND movement should have been rejected"
+  rescue ArgumentError => e
+    raise "Error should mention HAND→HAND" unless e.message.include?("HAND→HAND") || e.message.include?("HAND")
+    raise "Error should mention forbidden" unless e.message.downcase.include?("forbidden")
+  end
+
+  # Test case 2: Valid? should return false
+  raise "valid? should return false for HAND→HAND" if Sashite::Ggn.valid?(hand_to_hand_ggn)
+
+  # Test case 3: HAND→board should be allowed (drops)
+  hand_to_board_ggn = {
+    "S:P" => {
+      "*" => {
+        "e4" => [
+          {
+            "must" => { "e4" => "empty" },
+            "deny" => {},
+            "diff" => {
+              "board" => { "e4" => "S:P" },
+              "hands" => { "S:P" => -1 },
+              "toggle" => true
+            }
+          }
+        ]
+      }
+    }
+  }
+
+  raise "HAND→board should be valid (drops)" unless Sashite::Ggn.valid?(hand_to_board_ggn)
+
+  # Test case 4: board→HAND should be allowed (captures to hand)
+  board_to_hand_ggn = {
+    "S:P" => {
+      "e4" => {
+        "*" => [
+          {
+            "must" => {},
+            "deny" => {},
+            "diff" => {
+              "board" => { "e4" => nil },
+              "hands" => { "S:P" => 1 },
+              "toggle" => true
+            }
+          }
+        ]
+      }
+    }
+  }
+
+  raise "board→HAND should be valid (captures)" unless Sashite::Ggn.valid?(board_to_hand_ggn)
+end
+
 # ============================================================================
 # VALIDATION ERROR TESTS
 # ============================================================================

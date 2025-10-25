@@ -346,6 +346,8 @@ transitions = engine.where(active_side, squares)
 | **deny** | Hash (LCN) | Pre-conditions that must not be satisfied |
 | **diff** | Hash (STN) | State transition specification |
 
+**Note (normative)**: To preserve GGN's board-reachability scope, entries where **`source="*"` and `destination="*"`** (direct **HAND→HAND**) are **forbidden** by the specification.
+
 ---
 
 ## Usage Examples

@@ -118,10 +118,25 @@ module Sashite
 
       destinations.each do |destination, possibilities|
         validate_location!(destination, piece)
+        validate_hand_to_hand!(source, destination)
         validate_possibilities!(possibilities, piece, source, destination)
       end
     end
     private_class_method :validate_destinations!
+
+    # Validate that source and destination are not both HAND ("*")
+    #
+    # @param source [String] Source location
+    # @param destination [String] Destination location
+    # @raise [ArgumentError] If both source and destination are HAND
+    # @return [void]
+    # @api private
+    def self.validate_hand_to_hand!(source, destination)
+      return unless Hand.reserve?(source) && Hand.reserve?(destination)
+
+      raise ::ArgumentError, "Invalid HAND→HAND movement: source and destination cannot both be '*' (forbidden by GGN specification)"
+    end
+    private_class_method :validate_hand_to_hand!
 
     # Validate possibilities array structure
     #
