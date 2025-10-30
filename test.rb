@@ -44,11 +44,7 @@ run_test("Module validation accepts valid GGN structures") do
         "e4" => [
           {
             "must" => { "e3" => "empty", "e4" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e2" => nil, "e4" => "C:P" },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -63,12 +59,12 @@ run_test("Module validation rejects invalid structures") do
     nil,
     [],
     "",
-    { "1nvalid:qpi" => {} },
+    { "invalid:qpi" => {} },
     { "C:K" => "not a hash" },
     { "C:K" => { "invalid_cell" => {} } },
     { "C:K" => { "e1" => "not a hash" } },
     { "C:K" => { "e1" => { "e2" => "not an array" } } },
-    { "C:K" => { "e1" => { "e2" => [{ "must" => "1nvalid" }] } } }
+    { "C:K" => { "e1" => { "e2" => [{ "must" => "invalid" }] } } }
   ]
 
   invalid_cases.each do |invalid_ggn|
@@ -87,11 +83,7 @@ run_test("Module parse creates Ruleset instances") do
         "e2" => [
           {
             "must" => { "e2" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e1" => nil, "e2" => "C:K" },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -131,11 +123,7 @@ run_test("Ruleset initialization without validation") do
         "e4" => [
           {
             "must" => { "e3" => "empty", "e4" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e2" => nil, "e4" => "C:P" },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -153,11 +141,7 @@ run_test("Ruleset select method returns Source") do
         "e2" => [
           {
             "must" => { "e2" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e1" => nil, "e2" => "C:K" },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -188,8 +172,7 @@ run_test("Ruleset piece? method") do
         "e2" => [
           {
             "must" => {},
-            "deny" => {},
-            "diff" => { "board" => { "e1" => nil, "e2" => "C:K" }, "toggle" => true }
+            "deny" => {}
           }
         ]
       }
@@ -204,9 +187,9 @@ end
 
 run_test("Ruleset pieces method") do
   ggn_data = {
-    "C:K" => { "e1" => { "e2" => [{ "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }] } },
-    "C:Q" => { "d1" => { "d4" => [{ "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }] } },
-    "C:R" => { "a1" => { "a4" => [{ "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }] } }
+    "C:K" => { "e1" => { "e2" => [{ "must" => {}, "deny" => {} }] } },
+    "C:Q" => { "d1" => { "d4" => [{ "must" => {}, "deny" => {} }] } },
+    "C:R" => { "a1" => { "a4" => [{ "must" => {}, "deny" => {} }] } }
   }
 
   ruleset = Sashite::Ggn::Ruleset.new(ggn_data)
@@ -227,7 +210,7 @@ run_test("Source from method returns Destination") do
   source_data = {
     "e1" => {
       "e2" => [
-        { "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }
+        { "must" => {}, "deny" => {} }
       ]
     }
   }
@@ -286,7 +269,7 @@ end
 run_test("Destination to method returns Engine") do
   destination_data = {
     "e2" => [
-      { "must" => {}, "deny" => {}, "diff" => { "toggle" => true } }
+      { "must" => {}, "deny" => {} }
     ]
   }
 
@@ -345,11 +328,7 @@ run_test("Engine where method evaluates conditions") do
   possibilities = [
     {
       "must" => { "e2" => "empty" },
-      "deny" => {},
-      "diff" => {
-        "board" => { "e1" => nil, "e2" => "M:K" },
-        "toggle" => true
-      }
+      "deny" => {}
     }
   ]
 
@@ -357,24 +336,24 @@ run_test("Engine where method evaluates conditions") do
 
   active_side = :first
   squares = {
-    "e1" => "M:K",
+    "e1" => "C:K",
     "e2" => nil
   }
 
-  transitions = engine.where(active_side, squares)
+  results = engine.where(active_side, squares)
 
-  raise "where should return array" unless transitions.is_a?(Array)
-  raise "where should return transitions for matching conditions" unless transitions.size == 1
-  raise "transition should be STN Transition" unless transitions.first.is_a?(Sashite::Stn::Transition)
-  raise "transition should have correct board changes" unless transitions.first.to_h == { board: { "e1" => nil, "e2" => "M:K" }, toggle: true }
+  raise "where should return array" unless results.is_a?(Array)
+  raise "where should return possibilities for matching conditions" unless results.size == 1
+  raise "result should be a Hash" unless results.first.is_a?(Hash)
+  raise "result should have must field" unless results.first.key?("must")
+  raise "result should have deny field" unless results.first.key?("deny")
 end
 
 run_test("Engine where returns empty array when conditions not met") do
   possibilities = [
     {
       "must" => { "e4" => "enemy" },
-      "deny" => {},
-      "diff" => { "toggle" => true }
+      "deny" => {}
     }
   ]
 
@@ -386,20 +365,16 @@ run_test("Engine where returns empty array when conditions not met") do
     "e4" => nil  # Empty, not enemy
   }
 
-  transitions = engine.where(active_side, squares)
+  results = engine.where(active_side, squares)
 
-  raise "where should return empty array when conditions not met" unless transitions.empty?
+  raise "where should return empty array when conditions not met" unless results.empty?
 end
 
 run_test("Engine evaluates 'empty' keyword correctly") do
   possibilities = [
     {
       "must" => { "e3" => "empty", "e4" => "empty" },
-      "deny" => {},
-      "diff" => {
-        "board" => { "e2" => nil, "e4" => "C:P" },
-        "toggle" => true
-      }
+      "deny" => {}
     }
   ]
 
@@ -412,20 +387,16 @@ run_test("Engine evaluates 'empty' keyword correctly") do
     "e4" => nil
   }
 
-  transitions = engine.where(active_side, squares)
+  results = engine.where(active_side, squares)
 
-  raise "empty keyword should be evaluated correctly" unless transitions.size == 1
+  raise "empty keyword should be evaluated correctly" unless results.size == 1
 end
 
 run_test("Engine evaluates 'enemy' keyword correctly") do
   possibilities = [
     {
       "must" => { "e4" => "enemy" },
-      "deny" => {},
-      "diff" => {
-        "board" => { "e3" => nil, "e4" => "C:P" },
-        "toggle" => true
-      }
+      "deny" => {}
     }
   ]
 
@@ -437,17 +408,16 @@ run_test("Engine evaluates 'enemy' keyword correctly") do
     "e4" => "c:p"  # Enemy piece
   }
 
-  transitions = engine.where(active_side, squares)
+  results = engine.where(active_side, squares)
 
-  raise "enemy keyword should be evaluated correctly" unless transitions.size == 1
+  raise "enemy keyword should be evaluated correctly" unless results.size == 1
 end
 
 run_test("Engine evaluates QPI identifier conditions correctly") do
   possibilities = [
     {
       "must" => { "h1" => "C:+R", "e1" => "C:+K" },
-      "deny" => {},
-      "diff" => { "toggle" => true }
+      "deny" => {}
     }
   ]
 
@@ -459,21 +429,17 @@ run_test("Engine evaluates QPI identifier conditions correctly") do
     "h1" => "C:+R"
   }
 
-  transitions = engine.where(active_side, squares)
+  results = engine.where(active_side, squares)
 
-  raise "QPI identifier conditions should be evaluated" unless transitions.is_a?(Array)
-  raise "QPI identifier conditions should match" unless transitions.size == 1
+  raise "QPI identifier conditions should be evaluated" unless results.is_a?(Array)
+  raise "QPI identifier conditions should match" unless results.size == 1
 end
 
 run_test("Engine evaluates 'deny' conditions correctly") do
   possibilities = [
     {
       "must" => {},
-      "deny" => { "e3" => "enemy" },
-      "diff" => {
-        "board" => { "e2" => nil, "e4" => "C:P" },
-        "toggle" => true
-      }
+      "deny" => { "e3" => "enemy" }
     }
   ]
 
@@ -487,7 +453,7 @@ run_test("Engine evaluates 'deny' conditions correctly") do
     "e3" => "c:p",  # Enemy piece
     "e4" => nil
   }
-  transitions_denied = engine.where(active_side, squares_denied)
+  results_denied = engine.where(active_side, squares_denied)
 
   # Board without enemy at e3 - should pass
   squares_allowed = {
@@ -495,10 +461,32 @@ run_test("Engine evaluates 'deny' conditions correctly") do
     "e3" => nil,
     "e4" => nil
   }
-  transitions_allowed = engine.where(active_side, squares_allowed)
+  results_allowed = engine.where(active_side, squares_allowed)
 
-  raise "deny should reject when condition met" unless transitions_denied.empty?
-  raise "deny should allow when condition not met" unless transitions_allowed.size == 1
+  raise "deny should reject when condition met" unless results_denied.empty?
+  raise "deny should allow when condition not met" unless results_allowed.size == 1
+end
+
+run_test("Engine validates active_side parameter") do
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new({ "must" => {}, "deny" => {} })
+
+  begin
+    engine.where(:invalid, {})
+    raise "Should have raised ArgumentError for invalid active_side"
+  rescue ArgumentError => e
+    raise "Error should mention active_side" unless e.message.include?("active_side")
+  end
+end
+
+run_test("Engine validates squares parameter") do
+  engine = Sashite::Ggn::Ruleset::Source::Destination::Engine.new({ "must" => {}, "deny" => {} })
+
+  begin
+    engine.where(:first, "not a hash")
+    raise "Should have raised ArgumentError for invalid squares"
+  rescue ArgumentError => e
+    raise "Error should mention squares" unless e.message.include?("squares")
+  end
 end
 
 # ============================================================================
@@ -512,11 +500,7 @@ run_test("Method chaining works correctly") do
         "e2" => [
           {
             "must" => { "e2" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e1" => nil, "e2" => "C:K" },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -531,14 +515,15 @@ run_test("Method chaining works correctly") do
     "e2" => nil
   }
 
-  transitions = ruleset
+  results = ruleset
     .select("C:K")
     .from("e1")
     .to("e2")
     .where(active_side, squares)
 
-  raise "method chaining should work" unless transitions.is_a?(Array)
-  raise "transitions should contain results" unless transitions.size == 1
+  raise "method chaining should work" unless results.is_a?(Array)
+  raise "results should contain possibilities" unless results.size == 1
+  raise "result should be a Hash" unless results.first.is_a?(Hash)
 end
 
 # ============================================================================
@@ -549,12 +534,7 @@ run_test("Engine handles HAND notation for drops") do
   possibilities = [
     {
       "must" => { "e4" => "empty" },
-      "deny" => {},
-      "diff" => {
-        "board" => { "e4" => "S:P" },
-        "hands" => { "S:P" => -1 },
-        "toggle" => true
-      }
+      "deny" => {}
     }
   ]
 
@@ -565,13 +545,13 @@ run_test("Engine handles HAND notation for drops") do
     "e4" => nil  # Empty square for drop
   }
 
-  transitions = engine.where(active_side, squares)
+  results = engine.where(active_side, squares)
 
-  raise "HAND notation should work for drops" unless transitions.is_a?(Array)
-  raise "Drop should be allowed when square is empty" unless transitions.size == 1
+  raise "HAND notation should work for drops" unless results.is_a?(Array)
+  raise "Drop should be allowed when square is empty" unless results.size == 1
 end
 
-run_test("Validation rejects HAND→HAND movements (source='*' and destination='*')") do
+run_test("Validation rejects HAND→HAND movements") do
   # Test case 1: Direct HAND→HAND should be rejected
   hand_to_hand_ggn = {
     "S:P" => {
@@ -579,8 +559,7 @@ run_test("Validation rejects HAND→HAND movements (source='*' and destination='
         "*" => [
           {
             "must" => {},
-            "deny" => {},
-            "diff" => { "toggle" => true }
+            "deny" => {}
           }
         ]
       }
@@ -605,12 +584,7 @@ run_test("Validation rejects HAND→HAND movements (source='*' and destination='
         "e4" => [
           {
             "must" => { "e4" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e4" => "S:P" },
-              "hands" => { "S:P" => -1 },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -626,12 +600,7 @@ run_test("Validation rejects HAND→HAND movements (source='*' and destination='
         "*" => [
           {
             "must" => {},
-            "deny" => {},
-            "diff" => {
-              "board" => { "e4" => nil },
-              "hands" => { "S:P" => 1 },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -647,7 +616,7 @@ end
 
 run_test("Validation catches invalid QPI in piece key") do
   begin
-    Sashite::Ggn.parse({ "1nvalid" => {} })
+    Sashite::Ggn.parse({ "invalid" => {} })
     raise "Should have raised error for invalid QPI"
   rescue ArgumentError => e
     raise "Error should mention QPI" unless e.message.include?("QPI")
@@ -674,9 +643,8 @@ run_test("Validation catches invalid LCN in must field") do
         "e1" => {
           "e2" => [
             {
-              "must" => { "1nvalid" => "empty" },
-              "deny" => {},
-              "diff" => {}
+              "must" => { "1invalid" => "empty" },  # Invalide car commence par un chiffre
+              "deny" => {}
             }
           ]
         }
@@ -688,7 +656,7 @@ run_test("Validation catches invalid LCN in must field") do
   end
 end
 
-run_test("Validation catches invalid STN in diff field") do
+run_test("Validation catches invalid LCN in deny field") do
   begin
     Sashite::Ggn.parse({
       "C:K" => {
@@ -696,14 +664,13 @@ run_test("Validation catches invalid STN in diff field") do
           "e2" => [
             {
               "must" => {},
-              "deny" => {},
-              "diff" => { "board" => { "1nvalid" => "C:K" } }
+              "deny" => { "e3" => "invalid_state" }
             }
           ]
         }
       }
     })
-    raise "Should have raised error for invalid STN"
+    raise "Should have raised error for invalid LCN"
   rescue ArgumentError
     # Expected
   end
@@ -720,16 +687,7 @@ run_test("Complex castling scenario") do
         "g1" => [
           {
             "must" => { "f1" => "empty", "g1" => "empty", "h1" => "C:+R" },
-            "deny" => {},
-            "diff" => {
-              "board" => {
-                "e1" => nil,
-                "g1" => "C:K",
-                "h1" => nil,
-                "f1" => "C:R"
-              },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -746,14 +704,14 @@ run_test("Complex castling scenario") do
     "h1" => "C:+R"
   }
 
-  transitions = ruleset
+  results = ruleset
     .select("C:K")
     .from("e1")
     .to("g1")
     .where(active_side, squares)
 
-  raise "Castling scenario should work" unless transitions.is_a?(Array)
-  raise "Castling should be allowed" unless transitions.size == 1
+  raise "Castling scenario should work" unless results.is_a?(Array)
+  raise "Castling should be allowed" unless results.size == 1
 end
 
 run_test("En passant capture scenario") do
@@ -763,15 +721,7 @@ run_test("En passant capture scenario") do
         "f6" => [
           {
             "must" => { "f6" => "empty", "f5" => "c:-p" },
-            "deny" => {},
-            "diff" => {
-              "board" => {
-                "e5" => nil,
-                "f5" => nil,
-                "f6" => "C:P"
-              },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -787,14 +737,14 @@ run_test("En passant capture scenario") do
     "f6" => nil
   }
 
-  transitions = ruleset
+  results = ruleset
     .select("C:P")
     .from("e5")
     .to("f6")
     .where(active_side, squares)
 
-  raise "En passant scenario should work" unless transitions.is_a?(Array)
-  raise "En passant should be allowed" unless transitions.size == 1
+  raise "En passant scenario should work" unless results.is_a?(Array)
+  raise "En passant should be allowed" unless results.size == 1
 end
 
 run_test("Shogi pawn drop restriction") do
@@ -808,11 +758,6 @@ run_test("Shogi pawn drop restriction") do
               "e1" => "S:P", "e2" => "S:P", "e3" => "S:P",
               "e5" => "S:P", "e6" => "S:P", "e7" => "S:P",
               "e8" => "S:P", "e9" => "S:P"
-            },
-            "diff" => {
-              "board" => { "e4" => "S:P" },
-              "hands" => { "S:P" => -1 },
-              "toggle" => true
             }
           }
         ]
@@ -831,7 +776,7 @@ run_test("Shogi pawn drop restriction") do
     "e5" => "S:P",  # Pawn already on this file
     "e6" => nil, "e7" => nil, "e8" => nil, "e9" => nil
   }
-  transitions_blocked = ruleset.select("S:P").from("*").to("e4").where(active_side, squares_blocked)
+  results_blocked = ruleset.select("S:P").from("*").to("e4").where(active_side, squares_blocked)
 
   # Position without pawn on file e
   squares_allowed = {
@@ -839,10 +784,10 @@ run_test("Shogi pawn drop restriction") do
     "e4" => nil,
     "e5" => nil, "e6" => nil, "e7" => nil, "e8" => nil, "e9" => nil
   }
-  transitions_allowed = ruleset.select("S:P").from("*").to("e4").where(active_side, squares_allowed)
+  results_allowed = ruleset.select("S:P").from("*").to("e4").where(active_side, squares_allowed)
 
-  raise "Pawn drop should be blocked when file has pawn" unless transitions_blocked.empty?
-  raise "Pawn drop should be allowed when file is clear" unless transitions_allowed.size == 1
+  raise "Pawn drop should be blocked when file has pawn" unless results_blocked.empty?
+  raise "Pawn drop should be allowed when file is clear" unless results_allowed.size == 1
 end
 
 # ============================================================================
@@ -857,11 +802,7 @@ run_test("GGN structure matches specification") do
         "e4" => [
           {
             "must" => { "e3" => "empty", "e4" => "empty" },
-            "deny" => {},
-            "diff" => {
-              "board" => { "e2" => nil, "e4" => "C:P" },
-              "toggle" => true
-            }
+            "deny" => {}
           }
         ]
       }
@@ -880,6 +821,38 @@ run_test("GGN structure matches specification") do
 
   engine = destination.to("e4")
   raise "Engine should be created" unless engine.is_a?(Sashite::Ggn::Ruleset::Source::Destination::Engine)
+end
+
+run_test("Possibilities contain only 'must' and 'deny' fields") do
+  ggn_data = {
+    "C:P" => {
+      "e2" => {
+        "e4" => [
+          {
+            "must" => { "e3" => "empty" },
+            "deny" => {}
+          },
+          {
+            "must" => {},
+            "deny" => { "e3" => "enemy" }
+          }
+        ]
+      }
+    }
+  }
+
+  engine = Sashite::Ggn.parse(ggn_data).select("C:P").from("e2").to("e4")
+  results = engine.where(:first, { "e2" => "C:P", "e3" => nil, "e4" => nil })
+
+  results.each do |possibility|
+    raise "Possibility should be a Hash" unless possibility.is_a?(Hash)
+    raise "Possibility should have 'must' field" unless possibility.key?("must")
+    raise "Possibility should have 'deny' field" unless possibility.key?("deny")
+
+    # Verify no extra fields (only must and deny should be present)
+    extra_fields = possibility.keys - ["must", "deny"]
+    raise "Possibility should only have 'must' and 'deny', found: #{extra_fields}" unless extra_fields.empty?
+  end
 end
 
 puts

@@ -4,7 +4,6 @@ require "sashite/cell"
 require "sashite/hand"
 require "sashite/lcn"
 require "sashite/qpi"
-require "sashite/stn"
 
 require_relative "ggn/ruleset"
 
@@ -29,11 +28,7 @@ module Sashite
     #         "e4" => [
     #           {
     #             "must" => { "e3" => "empty", "e4" => "empty" },
-    #             "deny" => {},
-    #             "diff" => {
-    #               "board" => { "e2" => nil, "e4" => "C:P" },
-    #               "toggle" => true
-    #             }
+    #             "deny" => {}
     #           }
     #         ]
     #       }
@@ -84,7 +79,7 @@ module Sashite
     # @api private
     def self.validate_piece!(piece)
       raise ::ArgumentError, "Invalid piece identifier: #{piece}" unless piece.is_a?(::String)
-      raise ::ArgumentError, "Invalid QPI format: #{piece}" unless Qpi.valid?(piece)
+      raise ::ArgumentError, "Invalid QPI format: #{piece}" unless ::Sashite::Qpi.valid?(piece)
     end
     private_class_method :validate_piece!
 
@@ -132,7 +127,7 @@ module Sashite
     # @return [void]
     # @api private
     def self.validate_hand_to_hand!(source, destination)
-      return unless Hand.reserve?(source) && Hand.reserve?(destination)
+      return unless ::Sashite::Hand.reserve?(source) && ::Sashite::Hand.reserve?(destination)
 
       raise ::ArgumentError, "Invalid HAND→HAND movement: source and destination cannot both be '*' (forbidden by GGN specification)"
     end
@@ -173,11 +168,9 @@ module Sashite
       end
       raise ::ArgumentError, "Possibility must have 'must' field" unless possibility.key?("must")
       raise ::ArgumentError, "Possibility must have 'deny' field" unless possibility.key?("deny")
-      raise ::ArgumentError, "Possibility must have 'diff' field" unless possibility.key?("diff")
 
       validate_lcn_conditions!(possibility["must"], "must", piece, source, destination)
       validate_lcn_conditions!(possibility["deny"], "deny", piece, source, destination)
-      validate_stn_transition!(possibility["diff"], piece, source, destination)
     end
     private_class_method :validate_possibility!
 
@@ -192,27 +185,11 @@ module Sashite
     # @return [void]
     # @api private
     def self.validate_lcn_conditions!(conditions, field_name, piece, source, destination)
-      Lcn.parse(conditions)
+      ::Sashite::Lcn.parse(conditions)
     rescue ::ArgumentError => e
       raise ::ArgumentError, "Invalid LCN format in '#{field_name}' for #{piece} #{source}→#{destination}: #{e.message}"
     end
     private_class_method :validate_lcn_conditions!
-
-    # Validate STN transition
-    #
-    # @param transition [Hash] Transition to validate
-    # @param piece [String] Piece identifier (for error messages)
-    # @param source [String] Source location (for error messages)
-    # @param destination [String] Destination location (for error messages)
-    # @raise [ArgumentError] If transition is invalid
-    # @return [void]
-    # @api private
-    def self.validate_stn_transition!(transition, piece, source, destination)
-      Stn.parse(transition)
-    rescue ::StandardError => e
-      raise ::ArgumentError, "Invalid STN format in 'diff' for #{piece} #{source}→#{destination}: #{e.message}"
-    end
-    private_class_method :validate_stn_transition!
 
     # Validate location format
     #
@@ -224,7 +201,7 @@ module Sashite
     def self.validate_location!(location, piece)
       raise ::ArgumentError, "Location for #{piece} must be a String" unless location.is_a?(::String)
 
-      valid = Cell.valid?(location) || Hand.reserve?(location)
+      valid = ::Sashite::Cell.valid?(location) || ::Sashite::Hand.reserve?(location)
       raise ::ArgumentError, "Invalid location format: #{location}" unless valid
     end
     private_class_method :validate_location!

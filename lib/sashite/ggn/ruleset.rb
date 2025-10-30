@@ -23,6 +23,7 @@ module Sashite
       #   ruleset = Sashite::Ggn::Ruleset.new(data)
       def initialize(data)
         @data = data
+
         freeze
       end
 

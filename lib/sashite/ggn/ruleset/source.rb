@@ -14,6 +14,7 @@ module Sashite
         # @param data [Hash] Sources data structure
         def initialize(data)
           @data = data
+
           freeze
         end
 

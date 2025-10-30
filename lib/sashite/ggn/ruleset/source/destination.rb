@@ -15,6 +15,7 @@ module Sashite
           # @param data [Hash] Destinations data structure
           def initialize(data)
             @data = data
+
             freeze
           end
 
